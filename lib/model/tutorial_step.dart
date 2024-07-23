@@ -6,6 +6,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
+import '../src/util/constants.dart';
+
 abstract class TutorialStep {
   Future<void> execute(TutorialBloc? tutorialBloc) async {}
 }
@@ -20,41 +22,82 @@ abstract class TutorialStepWithID extends TutorialStep {
 }
 
 abstract class TutorialStepWithWaiting extends TutorialStepWithID {
-  final Duration duration;
+  final Duration timeout;
   final TutorialStep? replayStep;
   final void Function(TutorialBloc?) onFinished;
 
-  TutorialStepWithWaiting({required super.tutorialID,
-    super.loadFromRepository,
-    Duration? duration,
-    this.replayStep,
-    void Function(TutorialBloc?)? onFinished})
+  TutorialStepWithWaiting(
+      {required super.tutorialID,
+      super.loadFromRepository,
+      Duration? duration,
+      this.replayStep,
+      void Function(TutorialBloc?)? onFinished})
       : onFinished = onFinished ?? TutorialBloc.nextStep,
-        duration = duration ?? const Duration(seconds: 20);
+        timeout = duration ?? Constants.defaultConditionTimeout;
 
-  bool performConditionCheck();
+  Future<bool> performConditionCheck();
+
+  static Future<bool> conditionWithSubscription(
+      Duration timeout, Completer<bool> completer, StreamSubscription subscription) {
+    // Set a timeout to complete with false if the event doesn't occur
+    final timeoutTimer = Timer(timeout, () {
+      if (!completer.isCompleted) {
+        completer.complete(false);
+      }
+    });
+
+    return completer.future.then((value) {
+      subscription.cancel(); // Cancel the subscription
+      timeoutTimer.cancel(); // Cancel the timer
+      return value;
+    });
+  }
+
+  static Future<bool> conditionWithTimeout(Duration timeout, bool Function() condition) async {
+    final completer = Completer<bool>();
+
+    // Immediately return true if the condition is already met
+    if (condition()) {
+      return true;
+    }
+
+    // Set up a periodic timer to check for the condition
+    final timer = Timer.periodic(Constants.repeatConditionCheckInterval, (_) {
+      if (condition()) {
+        completer.complete(true);
+      }
+    });
+
+    // Set a timeout timer
+    final timeoutTimer = Timer(timeout, () {
+      if (!completer.isCompleted) {
+        completer.complete(false);
+      }
+    });
+
+    return completer.future.then((value) {
+      timeoutTimer.cancel(); // Cancel the subscription
+      timer.cancel(); // Cancel the timer
+      return value;
+    });
+  }
 
   @override
   Future<void> execute(TutorialBloc? tutorialBloc) async {
-    const int stepSize = 1;
-    for (int second = 0; second < duration.inSeconds; second += stepSize) {
-      await Future.delayed(const Duration(seconds: stepSize));
-      if (performConditionCheck()) {
-        onFinished(tutorialBloc);
-        return;
-      }
-    }
-    // Duration exceeded, trigger replay if set
-    if (replayStep != null) {
-      TutorialBloc.triggerReplay(tutorialBloc, replayStep);
+    if (await performConditionCheck()) {
+      onFinished(tutorialBloc);
     } else {
-      if (kDebugMode) {
-        print("TUTORIAL WARNING: "
-            "TutorialStepWithWaiting duration exceeded without replay, tutorial cannot be finished.");
+      // Duration exceeded and condition is not met, trigger replay if set
+      if (replayStep != null) {
+        TutorialBloc.triggerReplay(tutorialBloc, replayStep);
+      } else {
+        if (kDebugMode) {
+          print("TUTORIAL WARNING: "
+              "TutorialStepWithWaiting duration exceeded without replay, tutorial cannot be finished.");
+        }
       }
     }
   }
-
 }
 
 class WidgetHighlightTutorialStep extends TutorialStepWithID {
@@ -111,14 +154,14 @@ class WaitForContextTutorialStep extends TutorialStepWithWaiting {
   });
 
   @override
-  bool performConditionCheck() {
-    BuildContext? buildContext = loadFromRepository?.call();
-    if (buildContext == null) {
-      return false;
-    }
-    return ModalRoute
-        .of(buildContext)
-        ?.isCurrent ?? false;
+  Future<bool> performConditionCheck() async {
+    return TutorialStepWithWaiting.conditionWithTimeout(timeout, () {
+      BuildContext? buildContext = loadFromRepository?.call();
+      if (buildContext == null) {
+        return false;
+      }
+      return ModalRoute.of(buildContext)?.isCurrent ?? false;
+    });
   }
 
   @override
@@ -126,7 +169,7 @@ class WaitForContextTutorialStep extends TutorialStepWithWaiting {
     return WaitForContextTutorialStep(
         tutorialID: tutorialID,
         loadFromRepository: () => tutorialKeyRepository.get(tutorialID),
-        duration: duration,
+        duration: timeout,
         replayStep: replayStep,
         onFinished: onFinished);
   }
@@ -137,9 +180,9 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
       {required super.tutorialID, super.loadFromRepository, super.duration, super.replayStep, super.onFinished});
 
   @override
-  bool performConditionCheck() {
-    bool Function()? conditionFunction = loadFromRepository?.call();
-    if (conditionFunction != null && conditionFunction()) {
+  Future<bool> performConditionCheck() async {
+    Future<bool> Function(Duration)? conditionFunction = loadFromRepository?.call();
+    if (conditionFunction != null && await conditionFunction(timeout)) {
       return true;
     }
     return false;
@@ -150,7 +193,7 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
     return WaitForConditionTutorialStep(
         tutorialID: tutorialID,
         loadFromRepository: () => tutorialKeyRepository.get(tutorialID),
-        duration: duration,
+        duration: timeout,
         replayStep: replayStep,
         onFinished: onFinished);
   }
@@ -161,12 +204,14 @@ class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
       {required super.tutorialID, super.loadFromRepository, super.duration, super.replayStep, super.onFinished});
 
   @override
-  bool performConditionCheck() {
-    GlobalKey? widgetKey = loadFromRepository?.call();
-    if (widgetKey != null && widgetKey.currentContext != null) {
-      return true;
-    }
-    return false;
+  Future<bool> performConditionCheck() async {
+    return TutorialStepWithWaiting.conditionWithTimeout(timeout, () {
+      GlobalKey? widgetKey = loadFromRepository?.call();
+      if (widgetKey == null) {
+        return false;
+      }
+      return widgetKey.currentContext != null;
+    });
   }
 
   @override
@@ -174,7 +219,7 @@ class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
     return WaitForVisibleWidgetStep(
         tutorialID: tutorialID,
         loadFromRepository: () => tutorialKeyRepository.get(tutorialID),
-        duration: duration,
+        duration: timeout,
         replayStep: replayStep,
         onFinished: onFinished);
   }

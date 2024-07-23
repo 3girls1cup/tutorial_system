@@ -4,11 +4,17 @@ import 'package:tutorial_system/tutorial_system.dart';
 class TutorialKeyRepository {
   final GlobalKey<NavigatorState> globalNavigatorKey;
 
-  final Map<TutorialID, GlobalKey> _keyMap = {};
-  final Map<TutorialID, bool Function()> _conditionMap = {};
-  final Map<TutorialID, BuildContext> _contextMap = {};
+  final Map<TutorialID, GlobalKey> _keyMap;
+  final Map<TutorialID, Future<bool> Function(Duration)> _conditionMap;
+  final Map<TutorialID, BuildContext> _contextMap;
 
-  TutorialKeyRepository(this.globalNavigatorKey);
+  TutorialKeyRepository(this.globalNavigatorKey,
+      {Map<TutorialID, GlobalKey>? keyMap,
+      Map<TutorialID, Future<bool> Function(Duration)>? conditionMap,
+      Map<TutorialID, BuildContext>? contextMap})
+      : _keyMap = keyMap ?? {},
+        _conditionMap = conditionMap ?? {},
+        _contextMap = contextMap ?? {};
 
   void registerKey(TutorialID widgetID, GlobalKey key) {
     _keyMap[widgetID] = key;
@@ -26,7 +32,7 @@ class TutorialKeyRepository {
     return _keyMap[widgetID];
   }
 
-  void registerCondition(TutorialID conditionID, bool Function() condition) {
+  void registerCondition(TutorialID conditionID, Future<bool> Function(Duration timeout) condition) {
     _conditionMap[conditionID] = condition;
   }
 
@@ -34,7 +40,7 @@ class TutorialKeyRepository {
     _conditionMap.remove(conditionID);
   }
 
-  bool Function()? getCondition(TutorialID conditionID) {
+  Future<bool> Function(Duration)? getCondition(TutorialID conditionID) {
     return _conditionMap[conditionID];
   }
 
@@ -69,13 +75,13 @@ class TutorialKeyRepository {
   }
 
   dynamic get(TutorialID tutorialID) {
-    if(_keyMap.containsKey(tutorialID)) {
+    if (_keyMap.containsKey(tutorialID)) {
       return _keyMap[tutorialID] as GlobalKey;
     }
-    if(_conditionMap.containsKey(tutorialID)) {
-      return _conditionMap[tutorialID] as bool Function();
+    if (_conditionMap.containsKey(tutorialID)) {
+      return _conditionMap[tutorialID] as Future<bool> Function(Duration);
     }
-    if(_contextMap.containsKey(tutorialID)) {
+    if (_contextMap.containsKey(tutorialID)) {
       return _contextMap[tutorialID] as BuildContext;
     }
     return null;
