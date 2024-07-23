@@ -2,6 +2,8 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
+import '../src/util/constants.dart';
+
 abstract class TutorialEvent {
   const TutorialEvent();
 }
@@ -45,10 +47,10 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
 
   TutorialBloc(this._tutorial) : super(const TutorialState.idle()) {
     on<TutorialStartEvent>((event, emit) async {
-      progressTutorial(event, emit);
+      await progressTutorial(event, emit);
     });
     on<TutorialNextStepEvent>((event, emit) async {
-      progressTutorial(event, emit);
+      await progressTutorial(event, emit);
     });
     on<TutorialReplayStepEvent>((event, emit) async {
       TutorialStep? currentStep = state.currentTutorialStep;
@@ -64,12 +66,13 @@ class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
     });
   }
 
-  void progressTutorial(var event, var emit) {
+  Future<void> progressTutorial(var event, var emit) async {
     (TutorialStep?, int?) next = _tutorial.getNextStep(state._currentTutorialIndex);
     TutorialStep? nextStep = next.$1;
     int? nextIndex = next.$2;
 
     if (nextStep != null) {
+      await Future.delayed(Constants.waitBetweenSteps);
       nextStep.execute(this);
       emit(TutorialState.running(nextIndex, nextStep));
     } else {
