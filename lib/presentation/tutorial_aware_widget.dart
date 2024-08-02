@@ -19,7 +19,7 @@ class TutorialAwareWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final globKey = key as GlobalKey;
 
-    TutorialKeyRepository tutorialKeyRepository = context.read<TutorialKeyRepository>();
+    TutorialRepository tutorialKeyRepository = context.read<TutorialRepository>();
 
     if (tutorialKeyIDs != null) {
       tutorialKeyRepository.registerKeys(Map.fromEntries(tutorialKeyIDs!.map((keyID) => MapEntry(keyID, globKey))));

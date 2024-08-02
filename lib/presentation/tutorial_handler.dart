@@ -6,8 +6,7 @@ import 'package:tutorial_system/src/util/size_config.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
 class TutorialHandler {
-  final Tutorial tutorial;
-  final TutorialKeyRepository _tutorialKeyRepository;
+  final TutorialRepository _tutorialKeyRepository;
   final TutorialBloc _tutorialBloc;
 
   OverlayEntry? overlayEntry;
@@ -18,7 +17,8 @@ class TutorialHandler {
 
   final TextStyle tutorialTextStyle = const TextStyle(fontSize: 14.0, color: Colors.red, fontWeight: FontWeight.bold);
 
-  TutorialHandler(this.tutorial, this._tutorialKeyRepository) : _tutorialBloc = TutorialBloc(tutorial);
+  TutorialHandler(TutorialRunner tutorialRunner, this._tutorialKeyRepository)
+      : _tutorialBloc = TutorialBloc(tutorialRunner);
 
   void startTutorial() {
     _tutorialBloc.stream.listen((event) {

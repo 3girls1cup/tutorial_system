@@ -1,14 +1,14 @@
 import 'package:tutorial_system/tutorial_system.dart';
 
-class Tutorial {
+class TutorialRunner {
   final List<TutorialStep> tutorialSteps;
 
   final List<TutorialStep> _registeredStepsForReplay = [];
 
-  Tutorial._internal(this.tutorialSteps);
+  TutorialRunner._internal(this.tutorialSteps);
 
-  factory Tutorial(
-      TutorialContainer tutorialContainer, TutorialKeyRepository tutorialKeyRepository) {
+  factory TutorialRunner(
+      Tutorial tutorialContainer, TutorialRepository tutorialKeyRepository) {
     List<TutorialStep> tutorialSteps = tutorialContainer.tutorialSteps;
       List<TutorialStep> tutorialStepsWithLoadingFunction = [];
 
@@ -19,7 +19,7 @@ class Tutorial {
         }
         tutorialStepsWithLoadingFunction.add(tutorialStep);
       }
-      return Tutorial._internal(tutorialStepsWithLoadingFunction);
+      return TutorialRunner._internal(tutorialStepsWithLoadingFunction);
   }
 
   (TutorialStep?, int?) getNextStep(int? previousIndex) {

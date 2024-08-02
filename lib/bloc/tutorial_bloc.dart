@@ -43,7 +43,7 @@ class TutorialState extends Equatable {
 enum TutorialStatus { idle, running }
 
 class TutorialBloc extends Bloc<TutorialEvent, TutorialState> {
-  final Tutorial _tutorial;
+  final TutorialRunner _tutorial;
 
   TutorialBloc(this._tutorial) : super(const TutorialState.idle()) {
     on<TutorialStartEvent>((event, emit) async {

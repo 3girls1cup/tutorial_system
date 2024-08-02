@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
-class TutorialKeyRepository {
+class TutorialRepository {
   final GlobalKey<NavigatorState> globalNavigatorKey;
 
-  final Map<Type, TutorialContainer> _tutorialContainers;
+  final Map<Type, Tutorial> _tutorialContainers;
 
   final Map<TutorialID, GlobalKey> _keyMap;
   final Map<TutorialID, Future<bool> Function(Duration)> _conditionMap;
   final Map<TutorialID, BuildContext> _contextMap;
 
-  TutorialKeyRepository(this.globalNavigatorKey,
-      {List<TutorialContainer>? tutorialContainers,
+  TutorialRepository(this.globalNavigatorKey,
+      {List<Tutorial>? tutorialContainers,
         Map<TutorialID, GlobalKey>? keyMap,
         Map<TutorialID, Future<bool> Function(Duration)>? conditionMap,
         Map<TutorialID, BuildContext>? contextMap})
@@ -20,16 +20,16 @@ class TutorialKeyRepository {
         _conditionMap = conditionMap ?? {},
         _contextMap = contextMap ?? {};
 
-  static Map<Type, TutorialContainer> _getTypedMap(List<TutorialContainer>? containers) {
-    Map<Type, TutorialContainer> result = {};
-    for (TutorialContainer tutorialContainer in containers ?? []) {
+  static Map<Type, Tutorial> _getTypedMap(List<Tutorial>? containers) {
+    Map<Type, Tutorial> result = {};
+    for (Tutorial tutorialContainer in containers ?? []) {
       result[tutorialContainer.runtimeType] = tutorialContainer;
     }
     return result;
   }
 
   void callRegistrationFunction({required Type tutorialType, required dynamic caller, State? state}) {
-    TutorialContainer? tutorialContainer = _tutorialContainers[tutorialType];
+    Tutorial? tutorialContainer = _tutorialContainers[tutorialType];
     if (tutorialContainer != null) {
       tutorialContainer.registrationFunction(this, caller, state: state);
     }
