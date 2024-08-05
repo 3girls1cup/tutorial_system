@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
@@ -170,11 +169,19 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   }
 }
 
+/// A tutorial step that highlights a specific widget and displays text.
 class WidgetHighlightTutorialStep extends TutorialStepWithID {
+  /// The text to be displayed on screen during this tutorial step.
   final String tutorialText;
 
+  /// Creates a [WidgetHighlightTutorialStep] with the given [tutorialText] and [tutorialID].
   WidgetHighlightTutorialStep({required this.tutorialText, required super.tutorialID, super.loadFromRepository});
 
+
+  /// Executes the widget highlight step.
+  ///
+  /// Attempts to load the widget key from the repository. If the key is not found,
+  /// a warning is printed in debug mode.
   @override
   Future<void> execute(TutorialBloc? tutorialBloc) async {
     GlobalKey? widgetKey = loadFromRepository?.call();
@@ -185,6 +192,7 @@ class WidgetHighlightTutorialStep extends TutorialStepWithID {
     }
   }
 
+  /// Sets the loading function for this step using the provided [tutorialKeyRepository].
   @override
   WidgetHighlightTutorialStep setLoadingFunction({required TutorialRepository tutorialKeyRepository}) {
     return WidgetHighlightTutorialStep(
@@ -194,27 +202,12 @@ class WidgetHighlightTutorialStep extends TutorialStepWithID {
   }
 }
 
-class WaitForStateTutorialStep extends TutorialStep {
-  final Bloc bloc;
-  final bool Function(Object?) finishStateCompare;
-  final void Function(TutorialBloc?) onFinished;
-
-  WaitForStateTutorialStep(
-      {required this.bloc, required this.finishStateCompare, void Function(TutorialBloc?)? onFinished})
-      : onFinished = onFinished ?? TutorialBloc.nextStep;
-
-  @override
-  Future<void> execute(TutorialBloc? tutorialBloc) async {
-    await for (final Object? currentState in bloc.stream) {
-      if (finishStateCompare(currentState)) {
-        onFinished(tutorialBloc);
-        break;
-      }
-    }
-  }
-}
-
+/// A tutorial step that waits for a specific [BuildContext] to become current.
+///
+/// For example, useful for checking if a dialog has been opened.
 class WaitForContextTutorialStep extends TutorialStepWithWaiting {
+
+  /// Creates a [WaitForContextTutorialStep] with the given parameters.
   WaitForContextTutorialStep({
     required super.tutorialID,
     super.loadFromRepository,
@@ -223,6 +216,9 @@ class WaitForContextTutorialStep extends TutorialStepWithWaiting {
     super.onFinished,
   });
 
+  /// Performs the condition check for this waiting step.
+  ///
+  /// Checks if the loaded [BuildContext] is currently active.
   @override
   Future<bool> performConditionCheck() async {
     return TutorialStepWithWaiting.conditionWithTimeout(timeout, () {
@@ -234,6 +230,7 @@ class WaitForContextTutorialStep extends TutorialStepWithWaiting {
     });
   }
 
+  /// Sets the loading function for this step using the provided [tutorialKeyRepository].
   @override
   WaitForContextTutorialStep setLoadingFunction({required TutorialRepository tutorialKeyRepository}) {
     return WaitForContextTutorialStep(
@@ -245,10 +242,14 @@ class WaitForContextTutorialStep extends TutorialStepWithWaiting {
   }
 }
 
+/// A tutorial step that waits for a specific condition to be met.
 class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
   WaitForConditionTutorialStep(
       {required super.tutorialID, super.loadFromRepository, super.duration, super.replayStep, super.onFinished});
 
+  /// Performs the condition check for this waiting step.
+  ///
+  /// Loads and executes a condition function from the repository.
   @override
   Future<bool> performConditionCheck() async {
     Future<bool> Function(Duration)? conditionFunction = loadFromRepository?.call();
@@ -258,6 +259,7 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
     return false;
   }
 
+  /// Sets the loading function for this step using the provided [tutorialKeyRepository].
   @override
   TutorialStepWithID setLoadingFunction({required TutorialRepository tutorialKeyRepository}) {
     return WaitForConditionTutorialStep(
@@ -269,10 +271,15 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
   }
 }
 
+/// A tutorial step that waits for a specific widget to become visible.
 class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
+  /// Creates a [WaitForVisibleWidgetStep] with the given parameters.
   WaitForVisibleWidgetStep(
       {required super.tutorialID, super.loadFromRepository, super.duration, super.replayStep, super.onFinished});
 
+  /// Performs the condition check for this waiting step.
+  ///
+  /// Checks if the loaded widget key has a current context, indicating visibility.
   @override
   Future<bool> performConditionCheck() async {
     return TutorialStepWithWaiting.conditionWithTimeout(timeout, () {
@@ -284,6 +291,7 @@ class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
     });
   }
 
+  /// Sets the loading function for this step using the provided [tutorialKeyRepository].
   @override
   TutorialStepWithID setLoadingFunction({required TutorialRepository tutorialKeyRepository}) {
     return WaitForVisibleWidgetStep(
@@ -295,13 +303,21 @@ class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
   }
 }
 
+/// A tutorial step that plays an audio file.
 class AudioTutorialStep implements TutorialStep {
+  /// The asset path of the audio file to be played.
   final String assetPath;
+
+  /// A function to be called when the audio playback is finished.
   final void Function(TutorialBloc?) onFinished;
 
+  /// Creates an [AudioTutorialStep] with the given [assetPath] and optional [onFinished] function.
   AudioTutorialStep({required this.assetPath, void Function(TutorialBloc?)? onFinished})
       : onFinished = onFinished ?? TutorialBloc.nextStep;
 
+  /// Executes the audio tutorial step.
+  ///
+  /// Plays the audio file and calls [onFinished] when playback is complete.
   @override
   Future<void> execute(TutorialBloc? tutorialBloc) async {
     final player = AudioPlayer();
@@ -320,11 +336,17 @@ class AudioTutorialStep implements TutorialStep {
   }
 }
 
+/// A tutorial step that displays plain text.
 class PlainTextTutorialStep implements TutorialStep {
+  /// The text to be displayed during this tutorial step.
   final String tutorialText;
 
+  /// Creates a [PlainTextTutorialStep] with the given [tutorialText].
   PlainTextTutorialStep({required this.tutorialText});
 
+  /// Executes the plain text tutorial step.
+  ///
+  /// This method is currently empty and does not perform any action.
   @override
   Future<void> execute(TutorialBloc? tutorialBloc) async {}
 }
