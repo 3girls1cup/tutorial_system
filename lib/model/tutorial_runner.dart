@@ -8,13 +8,13 @@ class TutorialRunner {
   TutorialRunner._internal(this.tutorialSteps);
 
   factory TutorialRunner(
-      Tutorial tutorialContainer, TutorialRepository tutorialKeyRepository) {
+      Tutorial tutorialContainer, TutorialRepository tutorialRepository) {
     List<TutorialStep> tutorialSteps = tutorialContainer.tutorialSteps;
       List<TutorialStep> tutorialStepsWithLoadingFunction = [];
 
       for (TutorialStep tutorialStep in tutorialSteps) {
         if (tutorialStep is TutorialStepWithID) {
-          tutorialStepsWithLoadingFunction.add(tutorialStep.setLoadingFunction(tutorialKeyRepository: tutorialKeyRepository));
+          tutorialStepsWithLoadingFunction.add(tutorialStep.setLoadingFunction(tutorialRepository: tutorialRepository));
           continue;
         }
         tutorialStepsWithLoadingFunction.add(tutorialStep);

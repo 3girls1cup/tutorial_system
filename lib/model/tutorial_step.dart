@@ -36,10 +36,10 @@ abstract class TutorialStepWithID extends TutorialStep {
   /// optional [loadFromRepository] function.
   TutorialStepWithID({required this.tutorialID, this.loadFromRepository});
 
-  /// Sets the loading function for this step using the provided [tutorialKeyRepository].
+  /// Sets the loading function for this step using the provided [tutorialRepository].
   ///
   /// This method should be implemented to define how data is loaded for this step.
-  TutorialStepWithID setLoadingFunction({required TutorialRepository tutorialKeyRepository});
+  TutorialStepWithID setLoadingFunction({required TutorialRepository tutorialRepository});
 }
 
 /// A tutorial step that involves waiting for a condition to be met.
@@ -192,13 +192,13 @@ class WidgetHighlightTutorialStep extends TutorialStepWithID {
     }
   }
 
-  /// Sets the loading function for this step using the provided [tutorialKeyRepository].
+  /// Sets the loading function for this step using the provided [tutorialRepository].
   @override
-  WidgetHighlightTutorialStep setLoadingFunction({required TutorialRepository tutorialKeyRepository}) {
+  WidgetHighlightTutorialStep setLoadingFunction({required TutorialRepository tutorialRepository}) {
     return WidgetHighlightTutorialStep(
         tutorialText: tutorialText,
         tutorialID: tutorialID,
-        loadFromRepository: () => tutorialKeyRepository.get(tutorialID));
+        loadFromRepository: () => tutorialRepository.get(tutorialID));
   }
 }
 
@@ -230,12 +230,12 @@ class WaitForContextTutorialStep extends TutorialStepWithWaiting {
     });
   }
 
-  /// Sets the loading function for this step using the provided [tutorialKeyRepository].
+  /// Sets the loading function for this step using the provided [tutorialRepository].
   @override
-  WaitForContextTutorialStep setLoadingFunction({required TutorialRepository tutorialKeyRepository}) {
+  WaitForContextTutorialStep setLoadingFunction({required TutorialRepository tutorialRepository}) {
     return WaitForContextTutorialStep(
         tutorialID: tutorialID,
-        loadFromRepository: () => tutorialKeyRepository.get(tutorialID),
+        loadFromRepository: () => tutorialRepository.get(tutorialID),
         duration: timeout,
         replayStep: replayStep,
         onFinished: onFinished);
@@ -259,12 +259,12 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
     return false;
   }
 
-  /// Sets the loading function for this step using the provided [tutorialKeyRepository].
+  /// Sets the loading function for this step using the provided [tutorialRepository].
   @override
-  TutorialStepWithID setLoadingFunction({required TutorialRepository tutorialKeyRepository}) {
+  TutorialStepWithID setLoadingFunction({required TutorialRepository tutorialRepository}) {
     return WaitForConditionTutorialStep(
         tutorialID: tutorialID,
-        loadFromRepository: () => tutorialKeyRepository.get(tutorialID),
+        loadFromRepository: () => tutorialRepository.get(tutorialID),
         duration: timeout,
         replayStep: replayStep,
         onFinished: onFinished);
@@ -291,12 +291,12 @@ class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
     });
   }
 
-  /// Sets the loading function for this step using the provided [tutorialKeyRepository].
+  /// Sets the loading function for this step using the provided [tutorialRepository].
   @override
-  TutorialStepWithID setLoadingFunction({required TutorialRepository tutorialKeyRepository}) {
+  TutorialStepWithID setLoadingFunction({required TutorialRepository tutorialRepository}) {
     return WaitForVisibleWidgetStep(
         tutorialID: tutorialID,
-        loadFromRepository: () => tutorialKeyRepository.get(tutorialID),
+        loadFromRepository: () => tutorialRepository.get(tutorialID),
         duration: timeout,
         replayStep: replayStep,
         onFinished: onFinished);

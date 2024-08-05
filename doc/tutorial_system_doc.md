@@ -63,11 +63,11 @@ the required components.
  @override
 void initState() {
   super.initState();
-  final TutorialRepository tutorialKeyRepository = context.read<TutorialRepository>();
+  final TutorialRepository tutorialRepository = context.read<TutorialRepository>();
   // Register key
-  tutorialKeyRepository.registerKey(ExampleTutorialID.floatingButtonKey, _floatingActionButtonKey);
+  tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey, _floatingActionButtonKey);
   // Register condition
-  tutorialKeyRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
+  tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
     return TutorialStepWithWaiting.conditionWithTimeout(timeout, () => _counter > 0);
   });
 }
@@ -104,9 +104,9 @@ Example extension code:
 ```dart
 extension _ExampleTutorialExt on _MyHomePageState {
   void registerExampleTutorial() {
-    final TutorialKeyRepository tutorialKeyRepository = context.read<TutorialKeyRepository>();
-    tutorialKeyRepository.registerKey(ExampleTutorialID.floatingButtonKey, _floatingActionButtonKey);
-    tutorialKeyRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
+    final tutorialRepository tutorialRepository = context.read<tutorialRepository>();
+    tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey, _floatingActionButtonKey);
+    tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
       return TutorialStepWithWaiting.conditionWithTimeout(timeout, () => _counter > 0);
     });
   }
@@ -139,11 +139,11 @@ class ExampleTutorial extends Tutorial {
   String getName() => "Example tutorial";
 
   @override
-  void registrationFunction(TutorialRepository tutorialKeyRepository, caller, {State<StatefulWidget>? state}) {
+  void registrationFunction(TutorialRepository tutorialRepository, caller, {State<StatefulWidget>? state}) {
     switch(caller) {
       case _MyHomePageState myHomePageState: {
-        tutorialKeyRepository.registerKey(ExampleTutorialID.floatingButtonKey, myHomePageState._floatingActionButtonKey);
-        tutorialKeyRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
+        tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey, myHomePageState._floatingActionButtonKey);
+        tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
           return TutorialStepWithWaiting.conditionWithTimeout(timeout, () => myHomePageState._counter > 0);
         });
         break;
@@ -218,12 +218,12 @@ Our `registrationFunction` now needs to look like this:
 
 ```dart
   @override
-void registrationFunction(TutorialRepository tutorialKeyRepository, caller, {State<StatefulWidget>? state}) {
+void registrationFunction(TutorialRepository tutorialRepository, caller, {State<StatefulWidget>? state}) {
   switch (caller) {
     case MyHomePage myHomePage:
       {
-        tutorialKeyRepository.registerKey(ExampleTutorialID.floatingButtonKey, myHomePage.getFloatingButtonKey(state));
-        tutorialKeyRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
+        tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey, myHomePage.getFloatingButtonKey(state));
+        tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
           return TutorialStepWithWaiting.conditionWithTimeout(
               timeout, () => (myHomePage.getCounterValue(state) ?? 0) > 0);
         });

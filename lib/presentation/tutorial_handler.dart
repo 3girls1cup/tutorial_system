@@ -6,7 +6,7 @@ import 'package:tutorial_system/src/util/size_config.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
 class TutorialHandler {
-  final TutorialRepository _tutorialKeyRepository;
+  final TutorialRepository _tutorialRepository;
   final TutorialBloc _tutorialBloc;
 
   OverlayEntry? overlayEntry;
@@ -17,7 +17,7 @@ class TutorialHandler {
 
   final TextStyle tutorialTextStyle = const TextStyle(fontSize: 14.0, color: Colors.red, fontWeight: FontWeight.bold);
 
-  TutorialHandler(TutorialRunner tutorialRunner, this._tutorialKeyRepository)
+  TutorialHandler(TutorialRunner tutorialRunner, this._tutorialRepository)
       : _tutorialBloc = TutorialBloc(tutorialRunner);
 
   void startTutorial() {
@@ -41,20 +41,20 @@ class TutorialHandler {
   }
 
   (BuildContext, NavigatorState)? getCurrentContextAndState() {
-    if (_tutorialKeyRepository.globalNavigatorKey.currentContext == null) {
+    if (_tutorialRepository.globalNavigatorKey.currentContext == null) {
       if (kDebugMode) {
         print("TUTORIAL SYSTEM WARNING: Could not find current context to create overlay!");
       }
       return null;
     }
-    if (_tutorialKeyRepository.globalNavigatorKey.currentState == null) {
+    if (_tutorialRepository.globalNavigatorKey.currentState == null) {
       if (kDebugMode) {
         print("TUTORIAL SYSTEM WARNING: Could not find current state to create overlay!");
       }
       return null;
     }
-    BuildContext context = _tutorialKeyRepository.globalNavigatorKey.currentContext!;
-    NavigatorState state = _tutorialKeyRepository.globalNavigatorKey.currentState!;
+    BuildContext context = _tutorialRepository.globalNavigatorKey.currentContext!;
+    NavigatorState state = _tutorialRepository.globalNavigatorKey.currentState!;
     return (context, state);
   }
 

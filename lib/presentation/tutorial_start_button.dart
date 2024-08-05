@@ -27,9 +27,9 @@ class _TutorialStartButtonState extends State<TutorialStartButton> {
   }
 
   void _startTutorial() {
-    TutorialRepository tutorialKeyRepository = context.read<TutorialRepository>();
-    TutorialRunner tutorialRunner = TutorialRunner(widget.tutorial, tutorialKeyRepository);
-    TutorialHandler tutorialHandler = TutorialHandler(tutorialRunner, tutorialKeyRepository);
+    TutorialRepository tutorialRepository = context.read<TutorialRepository>();
+    TutorialRunner tutorialRunner = TutorialRunner(widget.tutorial, tutorialRepository);
+    TutorialHandler tutorialHandler = TutorialHandler(tutorialRunner, tutorialRepository);
     tutorialHandler.startTutorial();
   }
 }

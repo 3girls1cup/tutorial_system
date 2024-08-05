@@ -67,7 +67,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RepositoryProvider(
-        create: (_) => TutorialKeyRepository(_globalNavigatorKey),
+        create: (_) => tutorialRepository(_globalNavigatorKey),
     child: MaterialApp(
     navigatorKey: _globalNavigatorKey,
     title: 'Flutter Demo',
@@ -92,9 +92,9 @@ floatingActionButton: FloatingActionButton(
 ```dart
 extension _ExampleTutorialExt on _MyHomePageState {
   void registerExampleTutorial() {
-    final TutorialKeyRepository tutorialKeyRepository = context.read<TutorialKeyRepository>();
-    tutorialKeyRepository.registerKey(ExampleTutorialID.floatingButtonKey, _floatingActionButtonKey);
-    tutorialKeyRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
+    final tutorialRepository tutorialRepository = context.read<tutorialRepository>();
+    tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey, _floatingActionButtonKey);
+    tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
       return TutorialStepWithWaiting.conditionWithTimeout(timeout, () => _counter > 0);
     });
   }

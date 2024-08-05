@@ -22,18 +22,18 @@ abstract class Tutorial {
   /// ```dart
   /// switch(caller) {
   ///      case _MyHomePageState myHomePageState: {
-  ///         tutorialKeyRepository.registerKey(ExampleTutorialID.floatingButtonKey, myHomePageState._floatingActionButtonKey);
-  ///         tutorialKeyRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
+  ///         tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey, myHomePageState._floatingActionButtonKey);
+  ///         tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
   ///           return TutorialStepWithWaiting.conditionWithTimeout(timeout, () => myHomePageState._counter > 0);
   ///         });
   ///         break;
   ///       }
   /// ```
   /// Parameters:
-  ///   [tutorialKeyRepository]: The repository to register keys, conditions, and contexts.
+  ///   [tutorialRepository]: The repository to register keys, conditions, and contexts.
   ///   [caller]: The object calling the registration function.
   ///   [state]: Optional state object, typically a [State] from a [StatefulWidget].
-  void registrationFunction(TutorialRepository tutorialKeyRepository, dynamic caller, {State? state}) =>
+  void registrationFunction(TutorialRepository tutorialRepository, dynamic caller, {State? state}) =>
       throw UnimplementedError();
 
   /// Returns the list of tutorial steps.

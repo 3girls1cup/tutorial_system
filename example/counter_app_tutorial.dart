@@ -150,9 +150,9 @@ class _MyHomePageState extends State<MyHomePage> with TutorialRegistrationMixin 
 
 extension _ExampleTutorialExt on _MyHomePageState {
   void registerExampleTutorial() {
-    final TutorialRepository tutorialKeyRepository = context.read<TutorialRepository>();
-    tutorialKeyRepository.registerKey(ExampleTutorialID.floatingButtonKey, _floatingActionButtonKey);
-    tutorialKeyRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
+    final TutorialRepository tutorialRepository = context.read<TutorialRepository>();
+    tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey, _floatingActionButtonKey);
+    tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
       return TutorialStepWithWaiting.conditionWithTimeout(timeout, () => _counter > 0);
     });
   }
@@ -171,11 +171,11 @@ class ExampleTutorial extends Tutorial {
   String getName() => "Example tutorial";
 
   @override
-  void registrationFunction(TutorialRepository tutorialKeyRepository, caller, {State<StatefulWidget>? state}) {
+  void registrationFunction(TutorialRepository tutorialRepository, caller, {State<StatefulWidget>? state}) {
     switch(caller) {
       case MyHomePage myHomePage: {
-        tutorialKeyRepository.registerKey(ExampleTutorialID.floatingButtonKey, myHomePage.getFloatingButtonKey(state));
-        tutorialKeyRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
+        tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey, myHomePage.getFloatingButtonKey(state));
+        tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
           return TutorialStepWithWaiting.conditionWithTimeout(timeout, () => (myHomePage.getCounterValue(state) ?? 0) > 0);
         });
         break;
