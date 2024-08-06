@@ -1,7 +1,7 @@
 name: tutorial_system
-description: "State-based tutorial system for complex applications"
+description: "Interactive tutorials for flutter apps, without messing up your code."
 version: 0.0.1
-homepage:
+homepage: https://github.com/biocentral/tutorial_system
 
 environment:
   sdk: '>=3.3.1 <4.0.0'

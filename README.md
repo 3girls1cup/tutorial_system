@@ -1,31 +1,20 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
-
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/guides/libraries/writing-package-pages).
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-library-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/developing-packages).
--->
-
-State-based tutorial system for complex applications
+Interactive tutorials for flutter apps, without messing up your code.
 
 ## Features
 
 Using this package enables you to:
 
-* 📜 Separating your tutorial logic and code from the rest of your application
+* 📜 Separate your tutorial logic and code from the rest of your application
 * 🧙‍♀️ Create complex interactive tutorials, that go beyond highlighting important widgets of your app
     (although that is possible as well, of course!)
 * ⏫ Add more than one tutorial to your app
 
 ## Usage
 
-TODO: Include short and useful examples for package users. Add longer examples
-to `/example` folder.
+Find extensive information on how to use this package in the [example](example/counter_app_tutorial.dart) and 
+[documentation](doc/tutorial_system_doc.md).
+
+These are the basic steps to get you started:
 
 1. Create the enum that provides your tutorial IDs:
 ```dart
@@ -117,14 +106,8 @@ final ExampleTutorial exampleTutorial = ExampleTutorial();
 (...)
 
 TutorialStartButton(
-buttonBuilder: (onPressed) =>
-ElevatedButton(onPressed: onPressed, child: Text("Start Tutorial: ${exampleTutorial.getName()}")),
-tutorial: exampleTutorial,
+  buttonBuilder: (onPressed) =>
+  ElevatedButton(onPressed: onPressed, child: Text("Start Tutorial: ${exampleTutorial.getName()}")),
+  tutorial: exampleTutorial,
 ) 
 ```
-
-## Additional information
-
-TODO: Tell users more about the package: where to find more information, how to
-contribute to the package, how to file issues, what response they can expect
-from the package authors, and more.
