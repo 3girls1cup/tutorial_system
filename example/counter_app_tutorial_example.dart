@@ -172,14 +172,16 @@ class ExampleTutorial extends Tutorial {
 
   @override
   void registrationFunction(TutorialRepository tutorialRepository, caller, {State<StatefulWidget>? state}) {
-    switch(caller) {
-      case MyHomePage myHomePage: {
-        tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey, myHomePage.getFloatingButtonKey(state));
-        tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
-          return TutorialStepWithWaiting.conditionWithTimeout(timeout, () => (myHomePage.getCounterValue(state) ?? 0) > 0);
-        });
-        break;
-      }
+    switch (caller) {
+      case MyHomePage myHomePage:
+        {
+          tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey, myHomePage.getFloatingButtonKey(state));
+          tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
+            return TutorialStepWithWaiting.conditionWithTimeout(
+                timeout, () => (myHomePage.getCounterValue(state) ?? 0) > 0);
+          });
+          break;
+        }
     }
   }
 

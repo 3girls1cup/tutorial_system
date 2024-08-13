@@ -27,9 +27,9 @@ class TutorialRepository {
   /// to initialize the repository with existing data.
   TutorialRepository(this.globalNavigatorKey,
       {List<Tutorial>? tutorialContainers,
-        Map<TutorialID, GlobalKey>? keyMap,
-        Map<TutorialID, Future<bool> Function(Duration)>? conditionMap,
-        Map<TutorialID, BuildContext>? contextMap})
+      Map<TutorialID, GlobalKey>? keyMap,
+      Map<TutorialID, Future<bool> Function(Duration)>? conditionMap,
+      Map<TutorialID, BuildContext>? contextMap})
       : _tutorialContainers = _getTypedMap(tutorialContainers),
         _keyMap = keyMap ?? {},
         _conditionMap = conditionMap ?? {},

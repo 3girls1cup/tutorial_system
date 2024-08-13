@@ -177,7 +177,6 @@ class WidgetHighlightTutorialStep extends TutorialStepWithID {
   /// Creates a [WidgetHighlightTutorialStep] with the given [tutorialText] and [tutorialID].
   WidgetHighlightTutorialStep({required this.tutorialText, required super.tutorialID, super.loadFromRepository});
 
-
   /// Executes the widget highlight step.
   ///
   /// Attempts to load the widget key from the repository. If the key is not found,
@@ -206,7 +205,6 @@ class WidgetHighlightTutorialStep extends TutorialStepWithID {
 ///
 /// For example, useful for checking if a dialog has been opened.
 class WaitForContextTutorialStep extends TutorialStepWithWaiting {
-
   /// Creates a [WaitForContextTutorialStep] with the given parameters.
   WaitForContextTutorialStep({
     required super.tutorialID,
