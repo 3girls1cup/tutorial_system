@@ -11,7 +11,7 @@ Using this package enables you to:
 
 ## Usage
 
-Find extensive information on how to use this package in the [example](example/counter_app_tutorial.dart) and 
+Find extensive information on how to use this package in the [example](example/counter_app_tutorial_example.dart) and 
 [documentation](doc/tutorial_system_doc.md).
 
 These are the basic steps to get you started:
