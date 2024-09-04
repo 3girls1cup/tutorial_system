@@ -36,11 +36,17 @@ class TutorialRepository {
         _contextMap = contextMap ?? {};
 
   static Map<Type, Tutorial> _getTypedMap(List<Tutorial>? containers) {
-    Map<Type, Tutorial> result = {};
+    final Map<Type, Tutorial> result = {};
     for (Tutorial tutorialContainer in containers ?? []) {
       result[tutorialContainer.runtimeType] = tutorialContainer;
     }
     return result;
+  }
+
+  /// Adds tutorial containers dynamically even after the [TutorialRepository] was created
+  void addTutorialContainers(List<Tutorial> containers) {
+    final Map<Type, Tutorial> typedMap = _getTypedMap(containers);
+    _tutorialContainers.addAll(typedMap);
   }
 
   /// Calls the registration function for a specific tutorial type.
@@ -117,6 +123,11 @@ class TutorialRepository {
   /// Retrieves a [BuildContext] for a specific [TutorialID].
   BuildContext? getContext(TutorialID contextID) {
     return _contextMap[contextID];
+  }
+
+  /// Returns a copy of the registered tutorials
+  List<Tutorial> getTutorials() {
+    return List.from(_tutorialContainers.values);
   }
 
   /// Returns a copy of the internal key map.
