@@ -1,6 +1,6 @@
 name: tutorial_system
 description: "Interactive tutorials for flutter apps, without messing up your code."
-version: 0.0.2
+version: 0.0.3
 homepage: https://github.com/biocentral/tutorial_system
 
 environment:
@@ -18,7 +18,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
