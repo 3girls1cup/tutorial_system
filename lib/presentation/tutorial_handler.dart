@@ -81,6 +81,10 @@ class TutorialHandler {
   }
 
   Widget buildOverlayContent(BuildContext context, OverlayContent content) {
+    if(kIsWeb) {
+      // The overlay exclusion clipper is not correctly rendered on the web
+      return _buildOverlayContentWeb(context, content);
+    }
     return Stack(
       children: [
         Positioned.fill(
@@ -102,6 +106,35 @@ class TutorialHandler {
         _buildTutorialText(content),
         _buildNextButton(content),
       ],
+    );
+  }
+
+  Widget _buildOverlayContentWeb(BuildContext context, OverlayContent content) {
+    return Material(
+      type: MaterialType.transparency,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: AbsorbPointer(
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+          // Highlight border
+          Positioned(
+            left: content.exclusionRect.left,
+            top: content.exclusionRect.top,
+            width: content.exclusionRect.width,
+            height: content.exclusionRect.height,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+            ),
+          ),
+          _buildTutorialText(content),
+          _buildNextButton(content),
+        ],
+      ),
     );
   }
 
