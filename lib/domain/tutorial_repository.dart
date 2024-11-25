@@ -1,5 +1,10 @@
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter/material.dart';
 import 'package:tutorial_system/tutorial_system.dart';
+
+final tutorialRepositoryProvider = Provider<TutorialRepository>(
+  (ref) => TutorialRepository(GlobalKey<NavigatorState>()),
+);
 
 /// A repository class for managing tutorial-related data and functions.
 ///
@@ -54,7 +59,8 @@ class TutorialRepository {
   /// [tutorialType] is the type of the tutorial to register.
   /// [caller] is the object calling the registration function.
   /// [state] is an optional [State] object that can be passed to the registration function.
-  void callRegistrationFunction({required Type tutorialType, required dynamic caller, State? state}) {
+  void callRegistrationFunction(
+      {required Type tutorialType, required dynamic caller, State? state}) {
     Tutorial? tutorialContainer = _tutorialContainers[tutorialType];
     if (tutorialContainer != null) {
       tutorialContainer.registrationFunction(this, caller, state: state);
@@ -84,12 +90,14 @@ class TutorialRepository {
   }
 
   /// Registers a condition function for a specific [TutorialID].
-  void registerCondition(TutorialID conditionID, Future<bool> Function(Duration timeout) condition) {
+  void registerCondition(TutorialID conditionID,
+      Future<bool> Function(Duration timeout) condition) {
     _conditionMap[conditionID] = condition;
   }
 
   /// Registers multiple condition functions at once.
-  void registerConditions(Map<TutorialID, Future<bool> Function(Duration timeout)> conditions) {
+  void registerConditions(
+      Map<TutorialID, Future<bool> Function(Duration timeout)> conditions) {
     _conditionMap.addAll(conditions);
   }
 

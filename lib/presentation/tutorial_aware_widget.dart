@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
 /// A widget that automatically registers its key and context with the [TutorialRepository].
@@ -26,7 +26,7 @@ import 'package:tutorial_system/tutorial_system.dart';
 ///   ),
 /// )
 /// ```
-class TutorialAwareWidget extends StatelessWidget {
+class TutorialAwareWidget extends ConsumerWidget {
   /// The list of [TutorialID]s to register the widget's [GlobalKey] with.
   final List<TutorialID>? tutorialKeyIDs;
 
@@ -50,18 +50,19 @@ class TutorialAwareWidget extends StatelessWidget {
   }) : super(key: globalKey ?? GlobalKey());
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final globKey = key as GlobalKey;
 
-    TutorialRepository tutorialRepository = context.read<TutorialRepository>();
+    final tutorialRepository = ref.read(tutorialRepositoryProvider);
 
     if (tutorialKeyIDs != null) {
-      tutorialRepository.registerKeys(Map.fromEntries(tutorialKeyIDs!.map((keyID) => MapEntry(keyID, globKey))));
+      tutorialRepository.registerKeys(Map.fromEntries(
+          tutorialKeyIDs!.map((keyID) => MapEntry(keyID, globKey))));
     }
 
     if (tutorialContextIDs != null) {
-      tutorialRepository
-          .registerContexts(Map.fromEntries(tutorialContextIDs!.map((contextID) => MapEntry(contextID, context))));
+      tutorialRepository.registerContexts(Map.fromEntries(tutorialContextIDs!
+          .map((contextID) => MapEntry(contextID, context))));
     }
 
     return child;

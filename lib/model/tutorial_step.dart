@@ -15,9 +15,9 @@ abstract class TutorialStep {
   /// Executes the tutorial step.
   ///
   /// This method is called when the tutorial step should be performed.
-  /// [tutorialBloc] is the current state of the tutorial, which can be
+  /// [tutorialNotifier] is the current state of the tutorial, which can be
   /// used to update the tutorial's progress or state.
-  Future<void> execute(TutorialBloc? tutorialBloc) async {}
+  Future<void> execute(TutorialNotifier? notifier) async {}
 }
 
 /// A tutorial step that is associated with a specific [TutorialID].
@@ -39,7 +39,8 @@ abstract class TutorialStepWithID extends TutorialStep {
   /// Sets the loading function for this step using the provided [tutorialRepository].
   ///
   /// This method should be implemented to define how data is loaded for this step.
-  TutorialStepWithID setLoadingFunction({required TutorialRepository tutorialRepository});
+  TutorialStepWithID setLoadingFunction(
+      {required TutorialRepository tutorialRepository});
 }
 
 /// A tutorial step that involves waiting for a condition to be met.
@@ -55,20 +56,24 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   final TutorialStep? replayStep;
 
   /// A function to call when the step is finished successfully.
-  final void Function(TutorialBloc?) onFinished;
+  final void Function(TutorialNotifier? notifier) onFinished;
 
   /// Creates a [TutorialStepWithWaiting] with the given parameters.
   ///
   /// If [duration] is not provided, it defaults to [Constants.defaultConditionTimeout].
-  /// If [onFinished] is not provided, it defaults to [TutorialBloc.nextStep].
+  /// If [onFinished] is not provided, it defaults to [TutorialNotifier.nextStep].
   TutorialStepWithWaiting(
       {required super.tutorialID,
       super.loadFromRepository,
       Duration? duration,
       this.replayStep,
-      void Function(TutorialBloc?)? onFinished})
-      : onFinished = onFinished ?? TutorialBloc.nextStep,
+      void Function(TutorialNotifier?)? onFinished})
+      : onFinished = onFinished ?? _defaultNextStep,
         timeout = duration ?? Constants.defaultConditionTimeout;
+
+  static void _defaultNextStep(TutorialNotifier? notifier) {
+    notifier?.nextStep();
+  }
 
   /// Performs the condition check for this waiting step.
   ///
@@ -88,8 +93,8 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   /// Returns a [Future<bool>] that completes with the result of the condition check.
   ///
   /// The [subscription] and timer are automatically cancelled when the future completes.
-  static Future<bool> conditionWithSubscription(
-      Duration timeout, Completer<bool> completer, StreamSubscription subscription) {
+  static Future<bool> conditionWithSubscription(Duration timeout,
+      Completer<bool> completer, StreamSubscription subscription) {
     // Set a timeout to complete with false if the event doesn't occur
     final timeoutTimer = Timer(timeout, () {
       if (!completer.isCompleted) {
@@ -117,7 +122,8 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   /// Returns a [Future<bool>] that completes with the result of the condition check.
   ///
   /// All timers are automatically cancelled when the future completes.
-  static Future<bool> conditionWithTimeout(Duration timeout, bool Function() condition) async {
+  static Future<bool> conditionWithTimeout(
+      Duration timeout, bool Function() condition) async {
     final completer = Completer<bool>();
 
     // Immediately return true if the condition is already met
@@ -152,13 +158,13 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   /// If the condition is met, it calls [onFinished]. If not, it triggers a replay
   /// if [replayStep] is set, or logs a warning in debug mode.
   @override
-  Future<void> execute(TutorialBloc? tutorialBloc) async {
+  Future<void> execute(TutorialNotifier? tutorialNotifier) async {
     if (await performConditionCheck()) {
-      onFinished(tutorialBloc);
+      onFinished(tutorialNotifier);
     } else {
       // Duration exceeded and condition is not met, trigger replay if set
       if (replayStep != null) {
-        TutorialBloc.triggerReplay(tutorialBloc, replayStep);
+        tutorialNotifier?.replayStep(replayStep);
       } else {
         if (kDebugMode) {
           print("TUTORIAL WARNING: "
@@ -175,25 +181,30 @@ class WidgetHighlightTutorialStep extends TutorialStepWithID {
   final String tutorialText;
 
   /// Creates a [WidgetHighlightTutorialStep] with the given [tutorialText] and [tutorialID].
-  WidgetHighlightTutorialStep({required this.tutorialText, required super.tutorialID, super.loadFromRepository});
+  WidgetHighlightTutorialStep(
+      {required this.tutorialText,
+      required super.tutorialID,
+      super.loadFromRepository});
 
   /// Executes the widget highlight step.
   ///
   /// Attempts to load the widget key from the repository. If the key is not found,
   /// a warning is printed in debug mode.
   @override
-  Future<void> execute(TutorialBloc? tutorialBloc) async {
+  Future<void> execute(TutorialNotifier? tutorialNotifier) async {
     GlobalKey? widgetKey = loadFromRepository?.call();
     if (widgetKey == null) {
       if (kDebugMode) {
-        print("TUTORIAL WARNING: Highlight step invoked without widget key registered: Widget $tutorialID");
+        print(
+            "TUTORIAL WARNING: Highlight step invoked without widget key registered: Widget $tutorialID");
       }
     }
   }
 
   /// Sets the loading function for this step using the provided [tutorialRepository].
   @override
-  WidgetHighlightTutorialStep setLoadingFunction({required TutorialRepository tutorialRepository}) {
+  WidgetHighlightTutorialStep setLoadingFunction(
+      {required TutorialRepository tutorialRepository}) {
     return WidgetHighlightTutorialStep(
         tutorialText: tutorialText,
         tutorialID: tutorialID,
@@ -230,7 +241,8 @@ class WaitForContextTutorialStep extends TutorialStepWithWaiting {
 
   /// Sets the loading function for this step using the provided [tutorialRepository].
   @override
-  WaitForContextTutorialStep setLoadingFunction({required TutorialRepository tutorialRepository}) {
+  WaitForContextTutorialStep setLoadingFunction(
+      {required TutorialRepository tutorialRepository}) {
     return WaitForContextTutorialStep(
         tutorialID: tutorialID,
         loadFromRepository: () => tutorialRepository.get(tutorialID),
@@ -243,14 +255,19 @@ class WaitForContextTutorialStep extends TutorialStepWithWaiting {
 /// A tutorial step that waits for a specific condition to be met.
 class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
   WaitForConditionTutorialStep(
-      {required super.tutorialID, super.loadFromRepository, super.duration, super.replayStep, super.onFinished});
+      {required super.tutorialID,
+      super.loadFromRepository,
+      super.duration,
+      super.replayStep,
+      super.onFinished});
 
   /// Performs the condition check for this waiting step.
   ///
   /// Loads and executes a condition function from the repository.
   @override
   Future<bool> performConditionCheck() async {
-    Future<bool> Function(Duration)? conditionFunction = loadFromRepository?.call();
+    Future<bool> Function(Duration)? conditionFunction =
+        loadFromRepository?.call();
     if (conditionFunction != null && await conditionFunction(timeout)) {
       return true;
     }
@@ -259,7 +276,8 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
 
   /// Sets the loading function for this step using the provided [tutorialRepository].
   @override
-  TutorialStepWithID setLoadingFunction({required TutorialRepository tutorialRepository}) {
+  TutorialStepWithID setLoadingFunction(
+      {required TutorialRepository tutorialRepository}) {
     return WaitForConditionTutorialStep(
         tutorialID: tutorialID,
         loadFromRepository: () => tutorialRepository.get(tutorialID),
@@ -273,7 +291,11 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
 class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
   /// Creates a [WaitForVisibleWidgetStep] with the given parameters.
   WaitForVisibleWidgetStep(
-      {required super.tutorialID, super.loadFromRepository, super.duration, super.replayStep, super.onFinished});
+      {required super.tutorialID,
+      super.loadFromRepository,
+      super.duration,
+      super.replayStep,
+      super.onFinished});
 
   /// Performs the condition check for this waiting step.
   ///
@@ -291,7 +313,8 @@ class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
 
   /// Sets the loading function for this step using the provided [tutorialRepository].
   @override
-  TutorialStepWithID setLoadingFunction({required TutorialRepository tutorialRepository}) {
+  TutorialStepWithID setLoadingFunction(
+      {required TutorialRepository tutorialRepository}) {
     return WaitForVisibleWidgetStep(
         tutorialID: tutorialID,
         loadFromRepository: () => tutorialRepository.get(tutorialID),
@@ -307,29 +330,34 @@ class AudioTutorialStep implements TutorialStep {
   final String assetPath;
 
   /// A function to be called when the audio playback is finished.
-  final void Function(TutorialBloc?) onFinished;
+  final void Function(TutorialNotifier?) onFinished;
 
   /// Creates an [AudioTutorialStep] with the given [assetPath] and optional [onFinished] function.
-  AudioTutorialStep({required this.assetPath, void Function(TutorialBloc?)? onFinished})
-      : onFinished = onFinished ?? TutorialBloc.nextStep;
+  AudioTutorialStep(
+      {required this.assetPath, void Function(TutorialNotifier?)? onFinished})
+      : onFinished = onFinished ?? _defaultNextStep;
+
+  static void _defaultNextStep(TutorialNotifier? notifier) {
+    notifier?.nextStep();
+  }
 
   /// Executes the audio tutorial step.
   ///
   /// Plays the audio file and calls [onFinished] when playback is complete.
   @override
-  Future<void> execute(TutorialBloc? tutorialBloc) async {
+  Future<void> execute(TutorialNotifier? tutorialNotifier) async {
     final player = AudioPlayer();
     Duration? duration = await player.setAsset(assetPath);
     if (duration == null) {
       player.dispose();
-      onFinished(tutorialBloc);
+      onFinished(tutorialNotifier);
       return;
     }
     player.play();
     // TODO Get correct Duration value from Audio Source
     await Future.delayed(const Duration(seconds: 2)).then((value) {
       player.dispose();
-      onFinished(tutorialBloc);
+      onFinished(tutorialNotifier);
     });
   }
 }
@@ -346,5 +374,5 @@ class PlainTextTutorialStep implements TutorialStep {
   ///
   /// This method is currently empty and does not perform any action.
   @override
-  Future<void> execute(TutorialBloc? tutorialBloc) async {}
+  Future<void> execute(TutorialNotifier? tutorialNotifier) async {}
 }

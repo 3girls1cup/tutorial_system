@@ -1,50 +1,45 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
-  final GlobalKey<NavigatorState> _globalNavigatorKey = GlobalKey<NavigatorState>();
-
-  MyApp({super.key});
+class MyApp extends ConsumerWidget {
+  const MyApp({super.key});
 
   // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
-    return RepositoryProvider(
-      create: (_) => TutorialRepository(_globalNavigatorKey),
-      child: MaterialApp(
-        navigatorKey: _globalNavigatorKey,
-        title: 'Flutter Demo',
-        theme: ThemeData(
-          // This is the theme of your application.
-          //
-          // TRY THIS: Try running your application with "flutter run". You'll see
-          // the application has a purple toolbar. Then, without quitting the app,
-          // try changing the seedColor in the colorScheme below to Colors.green
-          // and then invoke "hot reload" (save your changes or press the "hot
-          // reload" button in a Flutter-supported IDE, or press "r" if you used
-          // the command line to start the app).
-          //
-          // Notice that the counter didn't reset back to zero; the application
-          // state is not lost during the reload. To reset the state, use hot
-          // restart instead.
-          //
-          // This works for code too, not just values: Most code changes can be
-          // tested with just a hot reload.
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          useMaterial3: true,
-        ),
-        home: const MyHomePage(title: 'Flutter Demo Home Page'),
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MaterialApp(
+      navigatorKey: ref.read(tutorialRepositoryProvider).globalNavigatorKey,
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        // This is the theme of your application.
+        //
+        // TRY THIS: Try running your application with "flutter run". You'll see
+        // the application has a purple toolbar. Then, without quitting the app,
+        // try changing the seedColor in the colorScheme below to Colors.green
+        // and then invoke "hot reload" (save your changes or press the "hot
+        // reload" button in a Flutter-supported IDE, or press "r" if you used
+        // the command line to start the app).
+        //
+        // Notice that the counter didn't reset back to zero; the application
+        // state is not lost during the reload. To reset the state, use hot
+        // restart instead.
+        //
+        // This works for code too, not just values: Most code changes can be
+        // tested with just a hot reload.
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
+class MyHomePage extends ConsumerStatefulWidget {
   const MyHomePage({super.key, required this.title});
 
   // This widget is the home page of your application. It is stateful, meaning
@@ -59,10 +54,11 @@ class MyHomePage extends StatefulWidget {
   final String title;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  ConsumerState<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> with TutorialRegistrationMixin {
+class _MyHomePageState extends ConsumerState<MyHomePage>
+    with TutorialRegistrationMixin {
   final GlobalKey _floatingActionButtonKey = GlobalKey();
   final ExampleTutorial exampleTutorial = ExampleTutorial();
 
@@ -131,8 +127,9 @@ class _MyHomePageState extends State<MyHomePage> with TutorialRegistrationMixin 
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             TutorialStartButton(
-              buttonBuilder: (onPressed) =>
-                  ElevatedButton(onPressed: onPressed, child: Text("Start Tutorial: ${exampleTutorial.getName()}")),
+              buttonBuilder: (onPressed) => ElevatedButton(
+                  onPressed: onPressed,
+                  child: Text("Start Tutorial: ${exampleTutorial.getName()}")),
               tutorial: exampleTutorial,
             )
           ],
@@ -150,10 +147,14 @@ class _MyHomePageState extends State<MyHomePage> with TutorialRegistrationMixin 
 
 extension _ExampleTutorialExt on _MyHomePageState {
   void registerExampleTutorial() {
-    final TutorialRepository tutorialRepository = context.read<TutorialRepository>();
-    tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey, _floatingActionButtonKey);
-    tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
-      return TutorialStepWithWaiting.conditionWithTimeout(timeout, () => _counter > 0);
+    final TutorialRepository tutorialRepository =
+        ref.read(tutorialRepositoryProvider);
+    tutorialRepository.registerKey(
+        ExampleTutorialID.floatingButtonKey, _floatingActionButtonKey);
+    tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased,
+        (timeout) {
+      return TutorialStepWithWaiting.conditionWithTimeout(
+          timeout, () => _counter > 0);
     });
   }
 }
@@ -171,12 +172,15 @@ class ExampleTutorial extends Tutorial {
   String getName() => "Example tutorial";
 
   @override
-  void registrationFunction(TutorialRepository tutorialRepository, caller, {State<StatefulWidget>? state}) {
+  void registrationFunction(TutorialRepository tutorialRepository, caller,
+      {State<StatefulWidget>? state}) {
     switch (caller) {
       case MyHomePage myHomePage:
         {
-          tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey, myHomePage.getFloatingButtonKey(state));
-          tutorialRepository.registerCondition(ExampleTutorialID.counterWasIncreased, (timeout) {
+          tutorialRepository.registerKey(ExampleTutorialID.floatingButtonKey,
+              myHomePage.getFloatingButtonKey(state));
+          tutorialRepository.registerCondition(
+              ExampleTutorialID.counterWasIncreased, (timeout) {
             return TutorialStepWithWaiting.conditionWithTimeout(
                 timeout, () => (myHomePage.getCounterValue(state) ?? 0) > 0);
           });
@@ -188,9 +192,13 @@ class ExampleTutorial extends Tutorial {
   @override
   List<TutorialStep> get tutorialSteps => [
         WidgetHighlightTutorialStep(
-            tutorialText: "Click here to increase the counter", tutorialID: ExampleTutorialID.floatingButtonKey),
-        WaitForConditionTutorialStep(tutorialID: ExampleTutorialID.counterWasIncreased),
-        PlainTextTutorialStep(tutorialText: "You successfully pressed the button! Tutorial finished..")
+            tutorialText: "Click here to increase the counter",
+            tutorialID: ExampleTutorialID.floatingButtonKey),
+        WaitForConditionTutorialStep(
+            tutorialID: ExampleTutorialID.counterWasIncreased),
+        PlainTextTutorialStep(
+            tutorialText:
+                "You successfully pressed the button! Tutorial finished..")
       ];
 }
 

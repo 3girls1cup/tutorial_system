@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/tutorial.dart';
 import '../domain/tutorial_repository.dart';
 import '../model/tutorial_runner.dart';
 import 'tutorial_handler.dart';
 
-class TutorialStartButton extends StatefulWidget {
+class TutorialStartButton extends ConsumerStatefulWidget {
   final Widget Function(VoidCallback onPressed) buttonBuilder;
   final Tutorial tutorial;
 
@@ -17,19 +17,26 @@ class TutorialStartButton extends StatefulWidget {
   });
 
   @override
-  State<TutorialStartButton> createState() => _TutorialStartButtonState();
+  ConsumerState<TutorialStartButton> createState() =>
+      _TutorialStartButtonState();
 }
 
-class _TutorialStartButtonState extends State<TutorialStartButton> {
+class _TutorialStartButtonState extends ConsumerState<TutorialStartButton> {
   @override
   Widget build(BuildContext context) {
     return widget.buttonBuilder(_startTutorial);
   }
 
   void _startTutorial() {
-    TutorialRepository tutorialRepository = context.read<TutorialRepository>();
-    TutorialRunner tutorialRunner = TutorialRunner(widget.tutorial, tutorialRepository);
-    TutorialHandler tutorialHandler = TutorialHandler(tutorialRunner, tutorialRepository);
+    TutorialRepository tutorialRepository =
+        ref.read(tutorialRepositoryProvider);
+    TutorialRunner tutorialRunner =
+        TutorialRunner(widget.tutorial, tutorialRepository);
+    final tutorialHandler = TutorialHandler(
+      tutorialRunner,
+      tutorialRepository,
+      ref,
+    );
     tutorialHandler.startTutorial();
   }
 }

@@ -1,6 +1,6 @@
 library tutorial_system;
 
-export 'bloc/tutorial_bloc.dart';
+export 'providers/tutorial_provider.dart';
 export 'data/tutorial.dart';
 export 'domain/tutorial_repository.dart';
 export 'model/tutorial_id.dart';
