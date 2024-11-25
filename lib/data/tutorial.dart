@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
 /// An abstract class representing a tutorial.
@@ -33,7 +34,9 @@ abstract class Tutorial {
   ///   [tutorialRepository]: The repository to register keys, conditions, and contexts.
   ///   [caller]: The object calling the registration function.
   ///   [state]: Optional state object, typically a [State] from a [StatefulWidget].
-  void registrationFunction(TutorialRepository tutorialRepository, dynamic caller, {State? state}) =>
+  void registrationFunction(
+          TutorialRepository tutorialRepository, dynamic caller,
+          {ConsumerState? state}) =>
       throw UnimplementedError();
 
   /// Returns the list of tutorial steps.

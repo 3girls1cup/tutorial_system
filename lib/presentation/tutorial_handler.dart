@@ -18,7 +18,7 @@ class TutorialHandler {
   final double buttonHeight = 50;
 
   final TextStyle tutorialTextStyle = const TextStyle(
-      fontSize: 14.0, color: Colors.red, fontWeight: FontWeight.bold);
+      fontSize: 14.0, color: Colors.white, fontWeight: FontWeight.bold);
 
   TutorialHandler(
       TutorialRunner tutorialRunner, this._tutorialRepository, this.ref)
@@ -26,10 +26,9 @@ class TutorialHandler {
 
   void startTutorial() {
     tutorialNotifier.stream.listen((event) {
+      removeOverlayEntry();
       if (event.currentTutorialStep != null) {
         createOverlay(event.currentTutorialStep!);
-      } else {
-        removeOverlayEntry();
       }
     }, onDone: () => dispose(), onError: (_) => dispose());
     tutorialNotifier.startTutorial();
@@ -76,6 +75,8 @@ class TutorialHandler {
     OverlayContent? content = switch (tutorialStep) {
       WidgetHighlightTutorialStep whtStep =>
         createHighlightOverlayContent(context, whtStep),
+      WaitForConditionTutorialStep whwtStep =>
+        createHighlightOverlayContent(context, whwtStep),
       PlainTextTutorialStep pttStep =>
         createTextOverlayContent(context, pttStep),
       _ => null
@@ -91,18 +92,14 @@ class TutorialHandler {
     }
   }
 
-  Widget buildOverlayContent(BuildContext context, OverlayContent content) {
+  Widget buildOverlayContent(BuildContext context, OverlayContent content,
+      {Widget? nextButton}) {
     if (kIsWeb) {
-      // The overlay exclusion clipper is not correctly rendered on the web
       return _buildOverlayContentWeb(context, content);
     }
     return Stack(
+      clipBehavior: Clip.none,
       children: [
-        Positioned.fill(
-          child: AbsorbPointer(
-            child: Container(color: Colors.transparent),
-          ),
-        ),
         ClipPath(
           clipper: ExclusionClipper(content.exclusionRect),
           child: BackdropFilter(
@@ -114,13 +111,15 @@ class TutorialHandler {
             ),
           ),
         ),
+        // Texte ou autres éléments au-dessus
         _buildTutorialText(content),
-        _buildNextButton(content),
+        if (nextButton != null) _buildNextButton(content, child: nextButton),
       ],
     );
   }
 
-  Widget _buildOverlayContentWeb(BuildContext context, OverlayContent content) {
+  Widget _buildOverlayContentWeb(BuildContext context, OverlayContent content,
+      {Widget? nextButton}) {
     return Material(
       type: MaterialType.transparency,
       child: Stack(
@@ -143,7 +142,7 @@ class TutorialHandler {
             ),
           ),
           _buildTutorialText(content),
-          _buildNextButton(content),
+          _buildNextButton(content, child: nextButton),
         ],
       ),
     );
@@ -163,25 +162,29 @@ class TutorialHandler {
     );
   }
 
-  Widget _buildNextButton(OverlayContent content) {
+  Widget _buildNextButton(OverlayContent content, {Widget? child}) {
     return Positioned(
       left: content.buttonPosition.dx,
       top: content.buttonPosition.dy,
-      child: SizedBox(
-        width: buttonWidth,
-        height: buttonHeight,
-        child: ElevatedButton(
-          onPressed: nextTutorialElement,
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
-          child: Text("Next", style: tutorialTextStyle),
-        ),
-      ),
+      child: child ??
+          SizedBox(
+            width: buttonWidth,
+            height: buttonHeight,
+            child: ElevatedButton(
+              onPressed: nextTutorialElement,
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+              child: Text("Next", style: tutorialTextStyle),
+            ),
+          ),
     );
   }
 
-  OverlayContent createHighlightOverlayContent(
-      BuildContext context, WidgetHighlightTutorialStep tutorialStep) {
-    GlobalKey? widgetKey = tutorialStep.loadFromRepository?.call();
+  OverlayContent? createHighlightOverlayContent(
+      BuildContext context, TutorialStepWithID tutorialStep) {
+    if (tutorialStep.tutorialText == null) {
+      return null;
+    }
+    GlobalKey? widgetKey = tutorialStep.loadFromRepository?.call()?.key;
     if (widgetKey == null || widgetKey.currentContext == null) {
       throw Exception("Widget key not found for highlight overlay");
     }
@@ -192,7 +195,7 @@ class TutorialHandler {
     double widgetCenterX = widgetPosition.dx + widgetRenderBox.size.width / 2;
 
     Size tutorialTextSize =
-        _calculateTextSize(context, tutorialStep.tutorialText);
+        _calculateTextSize(context, tutorialStep.tutorialText!);
 
     double clippingLeftPosition = widgetPosition.dx - overlayOffset.dx;
     double clippingTopPosition =
@@ -208,7 +211,7 @@ class TutorialHandler {
           clippingTopPosition - tutorialTextSize.height),
       buttonPosition: Offset(widgetCenterX - buttonWidth / 2,
           widgetPosition.dy + widgetRenderBox.size.height),
-      tutorialText: tutorialStep.tutorialText,
+      tutorialText: tutorialStep.tutorialText!,
     );
   }
 

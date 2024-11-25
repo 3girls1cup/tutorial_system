@@ -14,6 +14,8 @@ class TutorialRepository {
   /// The global navigator key used for navigation in the app.
   final GlobalKey<NavigatorState> globalNavigatorKey;
 
+  final Map<TutorialID, Stream<bool> Function()> _conditionStreamMap;
+
   /// A map of tutorial types to their corresponding [Tutorial] instances.
   final Map<Type, Tutorial> _tutorialContainers;
 
@@ -34,10 +36,12 @@ class TutorialRepository {
       {List<Tutorial>? tutorialContainers,
       Map<TutorialID, GlobalKey>? keyMap,
       Map<TutorialID, Future<bool> Function(Duration)>? conditionMap,
+      Map<TutorialID, Stream<bool> Function()>? conditionStreamMap,
       Map<TutorialID, BuildContext>? contextMap})
       : _tutorialContainers = _getTypedMap(tutorialContainers),
         _keyMap = keyMap ?? {},
         _conditionMap = conditionMap ?? {},
+        _conditionStreamMap = conditionStreamMap ?? {},
         _contextMap = contextMap ?? {};
 
   static Map<Type, Tutorial> _getTypedMap(List<Tutorial>? containers) {
@@ -60,7 +64,9 @@ class TutorialRepository {
   /// [caller] is the object calling the registration function.
   /// [state] is an optional [State] object that can be passed to the registration function.
   void callRegistrationFunction(
-      {required Type tutorialType, required dynamic caller, State? state}) {
+      {required Type tutorialType,
+      required dynamic caller,
+      ConsumerState? state}) {
     Tutorial? tutorialContainer = _tutorialContainers[tutorialType];
     if (tutorialContainer != null) {
       tutorialContainer.registrationFunction(this, caller, state: state);
@@ -93,6 +99,15 @@ class TutorialRepository {
   void registerCondition(TutorialID conditionID,
       Future<bool> Function(Duration timeout) condition) {
     _conditionMap[conditionID] = condition;
+  }
+
+  void registerConditionStream(
+      TutorialID conditionID, Stream<bool> Function() condition) {
+    _conditionStreamMap[conditionID] = condition;
+  }
+
+  void removeConditionStream(TutorialID conditionID) {
+    _conditionStreamMap.remove(conditionID);
   }
 
   /// Registers multiple condition functions at once.
@@ -163,16 +178,29 @@ class TutorialRepository {
   /// Retrieves the value associated with a [TutorialID] from any of the internal maps.
   ///
   /// Returns null if the [TutorialID] is not found in any map.
-  dynamic get(TutorialID tutorialID) {
+  TutorialRegistration get(TutorialID tutorialID) {
+    GlobalKey? key;
+    Future<bool> Function(Duration)? condition;
+    BuildContext? context;
+    Stream<bool> Function()? streamCondition;
     if (_keyMap.containsKey(tutorialID)) {
-      return _keyMap[tutorialID] as GlobalKey;
+      key = _keyMap[tutorialID] as GlobalKey;
     }
     if (_conditionMap.containsKey(tutorialID)) {
-      return _conditionMap[tutorialID] as Future<bool> Function(Duration);
+      condition = _conditionMap[tutorialID] as Future<bool> Function(Duration);
     }
     if (_contextMap.containsKey(tutorialID)) {
-      return _contextMap[tutorialID] as BuildContext;
+      context = _contextMap[tutorialID] as BuildContext;
     }
-    return null;
+
+    if (_conditionStreamMap.containsKey(tutorialID)) {
+      streamCondition =
+          _conditionStreamMap[tutorialID] as Stream<bool> Function();
+    }
+    return TutorialRegistration(
+        key: key,
+        condition: condition,
+        context: context,
+        streamCondition: streamCondition);
   }
 }

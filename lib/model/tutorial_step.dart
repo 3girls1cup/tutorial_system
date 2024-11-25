@@ -28,13 +28,19 @@ abstract class TutorialStep {
 abstract class TutorialStepWithID extends TutorialStep {
   /// The unique enum identifier for this tutorial step.
   final TutorialID tutorialID;
+  final String? tutorialText;
+  final Widget? tutorialWidgetContent;
 
   /// A function to load data from a repository
-  final dynamic Function()? loadFromRepository;
+  final TutorialRegistration? Function()? loadFromRepository;
 
   /// Creates a [TutorialStepWithID] with the given [tutorialID] and
   /// optional [loadFromRepository] function.
-  TutorialStepWithID({required this.tutorialID, this.loadFromRepository});
+  TutorialStepWithID(
+      {required this.tutorialID,
+      this.loadFromRepository,
+      this.tutorialText,
+      this.tutorialWidgetContent});
 
   /// Sets the loading function for this step using the provided [tutorialRepository].
   ///
@@ -65,6 +71,8 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   TutorialStepWithWaiting(
       {required super.tutorialID,
       super.loadFromRepository,
+      super.tutorialText,
+      super.tutorialWidgetContent,
       Duration? duration,
       this.replayStep,
       void Function(TutorialNotifier?)? onFinished})
@@ -159,6 +167,15 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   /// if [replayStep] is set, or logs a warning in debug mode.
   @override
   Future<void> execute(TutorialNotifier? tutorialNotifier) async {
+    if (tutorialText != null || tutorialWidgetContent != null) {
+      GlobalKey? widgetKey = loadFromRepository?.call()?.key;
+      if (widgetKey == null) {
+        if (kDebugMode) {
+          print(
+              "TUTORIAL WARNING: Highlight step invoked without widget key registered: Widget $tutorialID");
+        }
+      }
+    }
     if (await performConditionCheck()) {
       onFinished(tutorialNotifier);
     } else {
@@ -178,11 +195,11 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
 /// A tutorial step that highlights a specific widget and displays text.
 class WidgetHighlightTutorialStep extends TutorialStepWithID {
   /// The text to be displayed on screen during this tutorial step.
-  final String tutorialText;
 
   /// Creates a [WidgetHighlightTutorialStep] with the given [tutorialText] and [tutorialID].
   WidgetHighlightTutorialStep(
-      {required this.tutorialText,
+      {super.tutorialText,
+      super.tutorialWidgetContent,
       required super.tutorialID,
       super.loadFromRepository});
 
@@ -192,7 +209,7 @@ class WidgetHighlightTutorialStep extends TutorialStepWithID {
   /// a warning is printed in debug mode.
   @override
   Future<void> execute(TutorialNotifier? tutorialNotifier) async {
-    GlobalKey? widgetKey = loadFromRepository?.call();
+    GlobalKey? widgetKey = loadFromRepository?.call()?.key;
     if (widgetKey == null) {
       if (kDebugMode) {
         print(
@@ -205,8 +222,12 @@ class WidgetHighlightTutorialStep extends TutorialStepWithID {
   @override
   WidgetHighlightTutorialStep setLoadingFunction(
       {required TutorialRepository tutorialRepository}) {
+    if (tutorialText == null && tutorialWidgetContent == null) {
+      throw Exception("Tutorial text or widget content must be provided.");
+    }
     return WidgetHighlightTutorialStep(
         tutorialText: tutorialText,
+        tutorialWidgetContent: tutorialWidgetContent,
         tutorialID: tutorialID,
         loadFromRepository: () => tutorialRepository.get(tutorialID));
   }
@@ -231,7 +252,7 @@ class WaitForContextTutorialStep extends TutorialStepWithWaiting {
   @override
   Future<bool> performConditionCheck() async {
     return TutorialStepWithWaiting.conditionWithTimeout(timeout, () {
-      BuildContext? buildContext = loadFromRepository?.call();
+      BuildContext? buildContext = loadFromRepository?.call()?.context;
       if (buildContext == null) {
         return false;
       }
@@ -256,6 +277,8 @@ class WaitForContextTutorialStep extends TutorialStepWithWaiting {
 class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
   WaitForConditionTutorialStep(
       {required super.tutorialID,
+      super.tutorialText,
+      super.tutorialWidgetContent,
       super.loadFromRepository,
       super.duration,
       super.replayStep,
@@ -266,12 +289,27 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
   /// Loads and executes a condition function from the repository.
   @override
   Future<bool> performConditionCheck() async {
-    Future<bool> Function(Duration)? conditionFunction =
-        loadFromRepository?.call();
-    if (conditionFunction != null && await conditionFunction(timeout)) {
-      return true;
+    Stream<bool> Function()? conditionStreamFunction =
+        loadFromRepository?.call()?.streamCondition;
+    print(conditionStreamFunction);
+    if (conditionStreamFunction != null) {
+      final completer = Completer<bool>();
+      final subscription = conditionStreamFunction().listen((event) {
+        if (event) {
+          completer.complete(true);
+        }
+      });
+
+      return TutorialStepWithWaiting.conditionWithSubscription(
+          timeout, completer, subscription);
+    } else {
+      Future<bool> Function(Duration)? conditionFunction =
+          loadFromRepository?.call()?.condition;
+      if (conditionFunction != null && await conditionFunction(timeout)) {
+        return true;
+      }
+      return false;
     }
-    return false;
   }
 
   /// Sets the loading function for this step using the provided [tutorialRepository].
@@ -280,6 +318,8 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
       {required TutorialRepository tutorialRepository}) {
     return WaitForConditionTutorialStep(
         tutorialID: tutorialID,
+        tutorialText: tutorialText,
+        tutorialWidgetContent: tutorialWidgetContent,
         loadFromRepository: () => tutorialRepository.get(tutorialID),
         duration: timeout,
         replayStep: replayStep,
@@ -303,7 +343,7 @@ class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
   @override
   Future<bool> performConditionCheck() async {
     return TutorialStepWithWaiting.conditionWithTimeout(timeout, () {
-      GlobalKey? widgetKey = loadFromRepository?.call();
+      GlobalKey? widgetKey = loadFromRepository?.call()?.key;
       if (widgetKey == null) {
         return false;
       }
