@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tutorial_system/model/tutorial_overlay_config.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
 /// A widget that automatically registers its key and context with the [TutorialRepository].
@@ -56,8 +57,8 @@ class TutorialAwareWidget extends ConsumerWidget {
     final tutorialRepository = ref.read(tutorialRepositoryProvider);
 
     if (tutorialKeyIDs != null) {
-      tutorialRepository.registerKeys(Map.fromEntries(
-          tutorialKeyIDs!.map((keyID) => MapEntry(keyID, globKey))));
+      tutorialRepository.registerAllConfigs(Map.fromEntries(tutorialKeyIDs!
+          .map((keyID) => MapEntry(keyID, OverlayConfig(widgetKey: globKey)))));
     }
 
     if (tutorialContextIDs != null) {

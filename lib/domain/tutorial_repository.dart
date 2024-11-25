@@ -1,5 +1,6 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:tutorial_system/model/tutorial_overlay_config.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
 final tutorialRepositoryProvider = Provider<TutorialRepository>(
@@ -20,7 +21,7 @@ class TutorialRepository {
   final Map<Type, Tutorial> _tutorialContainers;
 
   /// A map of [TutorialID]s to their corresponding [GlobalKey]s.
-  final Map<TutorialID, GlobalKey> _keyMap;
+  final Map<TutorialID, OverlayConfig> _configMap;
 
   /// A map of [TutorialID]s to their corresponding condition functions.
   final Map<TutorialID, Future<bool> Function(Duration)> _conditionMap;
@@ -34,12 +35,12 @@ class TutorialRepository {
   /// to initialize the repository with existing data.
   TutorialRepository(this.globalNavigatorKey,
       {List<Tutorial>? tutorialContainers,
-      Map<TutorialID, GlobalKey>? keyMap,
+      Map<TutorialID, OverlayConfig>? keyMap,
       Map<TutorialID, Future<bool> Function(Duration)>? conditionMap,
       Map<TutorialID, Stream<bool> Function()>? conditionStreamMap,
       Map<TutorialID, BuildContext>? contextMap})
       : _tutorialContainers = _getTypedMap(tutorialContainers),
-        _keyMap = keyMap ?? {},
+        _configMap = keyMap ?? {},
         _conditionMap = conditionMap ?? {},
         _conditionStreamMap = conditionStreamMap ?? {},
         _contextMap = contextMap ?? {};
@@ -74,36 +75,46 @@ class TutorialRepository {
   }
 
   /// Registers a [GlobalKey] for a specific [TutorialID].
-  void registerKey(TutorialID widgetID, GlobalKey? key) {
+  void registerConfig(TutorialID widgetID, OverlayConfig? key,
+      {bool overwrite = false}) {
     if (key != null) {
-      _keyMap[widgetID] = key;
+      _configMap[widgetID] =
+          overwrite ? key : _configMap[widgetID]?.copyWith(other: key) ?? key;
     }
   }
 
-  /// Registers multiple [GlobalKey]s at once.
-  void registerKeys(Map<TutorialID, GlobalKey> keys) {
-    _keyMap.addAll(keys);
+  /// Registers multiple [OverlayConfig]s at once.
+  void registerAllConfigs(Map<TutorialID, OverlayConfig> keys,
+      {bool overwrite = false}) {
+    keys.forEach((key, value) {
+      registerConfig(key, value, overwrite: overwrite);
+    });
   }
 
   /// Removes a [GlobalKey] for a specific [TutorialID].
   void removeKey(TutorialID widgetID) {
-    _keyMap.remove(widgetID);
+    _configMap.remove(widgetID);
   }
 
   /// Retrieves a [GlobalKey] for a specific [TutorialID].
-  GlobalKey? getKey(TutorialID widgetID) {
-    return _keyMap[widgetID];
+  OverlayConfig? getKey(TutorialID widgetID) {
+    return _configMap[widgetID];
   }
 
   /// Registers a condition function for a specific [TutorialID].
-  void registerCondition(TutorialID conditionID,
+  void registerFutureCondition(TutorialID conditionID,
       Future<bool> Function(Duration timeout) condition) {
     _conditionMap[conditionID] = condition;
   }
 
-  void registerConditionStream(
+  void registerStreamCondition(
       TutorialID conditionID, Stream<bool> Function() condition) {
     _conditionStreamMap[conditionID] = condition;
+  }
+
+  void registerAllStreamConditions(
+      Map<TutorialID, Stream<bool> Function()> conditions) {
+    _conditionStreamMap.addAll(conditions);
   }
 
   void removeConditionStream(TutorialID conditionID) {
@@ -111,7 +122,7 @@ class TutorialRepository {
   }
 
   /// Registers multiple condition functions at once.
-  void registerConditions(
+  void registerAllFutureConditions(
       Map<TutorialID, Future<bool> Function(Duration timeout)> conditions) {
     _conditionMap.addAll(conditions);
   }
@@ -155,7 +166,7 @@ class TutorialRepository {
 
   /// Returns a copy of the internal key map.
   Map<TutorialID, GlobalKey> getKeyMap() {
-    return Map.from(_keyMap);
+    return Map.from(_configMap);
   }
 
   /// Returns a copy of the internal condition map.
@@ -170,7 +181,7 @@ class TutorialRepository {
 
   /// Checks if a given [TutorialID] exists in any of the internal maps.
   bool containsID(TutorialID? tutorialID) {
-    return _keyMap.containsKey(tutorialID) ||
+    return _configMap.containsKey(tutorialID) ||
         _conditionMap.containsKey(tutorialID) ||
         _contextMap.containsKey(tutorialID);
   }
@@ -179,12 +190,12 @@ class TutorialRepository {
   ///
   /// Returns null if the [TutorialID] is not found in any map.
   TutorialRegistration get(TutorialID tutorialID) {
-    GlobalKey? key;
+    OverlayConfig? key;
     Future<bool> Function(Duration)? condition;
     BuildContext? context;
     Stream<bool> Function()? streamCondition;
-    if (_keyMap.containsKey(tutorialID)) {
-      key = _keyMap[tutorialID] as GlobalKey;
+    if (_configMap.containsKey(tutorialID)) {
+      key = _configMap[tutorialID] as OverlayConfig;
     }
     if (_conditionMap.containsKey(tutorialID)) {
       condition = _conditionMap[tutorialID] as Future<bool> Function(Duration);
@@ -198,7 +209,7 @@ class TutorialRepository {
           _conditionStreamMap[tutorialID] as Stream<bool> Function();
     }
     return TutorialRegistration(
-        key: key,
+        overlayConfig: key,
         condition: condition,
         context: context,
         streamCondition: streamCondition);

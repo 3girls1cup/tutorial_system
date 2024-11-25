@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:tutorial_system/model/tutorial_overlay_config.dart';
 
 class TutorialRegistration {
-  final GlobalKey? key;
+  final OverlayConfig? overlayConfig;
   final Future<bool> Function(Duration)? condition;
   final BuildContext? context;
   final Stream<bool> Function()? streamCondition;
 
   TutorialRegistration(
-      {this.key, this.condition, this.context, this.streamCondition});
+      {this.overlayConfig, this.condition, this.context, this.streamCondition});
 }
