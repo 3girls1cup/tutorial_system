@@ -8,6 +8,7 @@ class AnimatedExclusionZone extends StatefulWidget {
   final double breathingScale;
   final double borderRadius;
   final Duration breathingDuration;
+  final Color overlayColor;
 
   const AnimatedExclusionZone({
     super.key,
@@ -15,6 +16,7 @@ class AnimatedExclusionZone extends StatefulWidget {
     this.borderRadius = 8.0,
     this.breathingScale = 1.1,
     required this.breathingDuration,
+    required this.overlayColor,
   });
 
   @override
@@ -61,7 +63,7 @@ class _AnimatedExclusionZoneState extends State<AnimatedExclusionZone>
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
             child: Container(
-              color: Colors.black.withOpacity(0.5),
+              color: widget.overlayColor,
             ),
           ),
         );

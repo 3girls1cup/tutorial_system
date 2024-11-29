@@ -85,39 +85,47 @@ class TutorialHandler {
           .loadFromRepository
           ?.call()
           ?.overlayConfig;
+      if (config == null) {
+        return;
+      }
       overlayEntry = OverlayEntry(
         builder: (BuildContext context) =>
-            buildOverlayContent(context, content, config: config),
+            buildOverlayContent(context, content, config),
       );
 
       state.overlay?.insert(overlayEntry!);
     }
   }
 
-  Widget buildOverlayContent(BuildContext context, OverlayContent content,
-      {OverlayConfig? config, Widget? nextButton}) {
-    final overlayColor =
-        config?.overlayColor ?? const Color.fromRGBO(0, 0, 0, 0.5);
+  Widget buildOverlayContent(
+      BuildContext context, OverlayContent content, OverlayConfig config) {
     if (kIsWeb) {
       //TODO : Web will not work very well probably
     }
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        // Fond de l'overlay
-
-        // Zone d'exclusion animée
-        if (config?.animateBreathing == true)
+        if (content.exclusionRect == null)
+          GestureDetector(
+            onTap: config.nextOnTap ? () => nextTutorialElement : null,
+            child: Container(
+              width: MediaQuery.of(context).size.width,
+              height: MediaQuery.of(context).size.height,
+              color: config.overlayColor,
+            ),
+          )
+        else if (config.animateBreathing == true)
           AnimatedExclusionZone(
-            exclusionRect: content.exclusionRect,
+            exclusionRect: content.exclusionRect!,
             borderRadius: content.exclusionBorderRadius,
-            breathingDuration: config!.breathingDuration,
+            breathingDuration: config.breathingDuration,
             breathingScale: config.breathingScale,
+            overlayColor: config.overlayColor,
           )
         else
           ClipPath(
             clipper: ExclusionClipper(
-              content.exclusionRect,
+              content.exclusionRect!,
               content.exclusionBorderRadius,
             ),
             child: BackdropFilter(
@@ -125,25 +133,25 @@ class TutorialHandler {
               child: Container(
                 width: SizeConfig.screenWidth(context),
                 height: SizeConfig.screenHeight(context),
-                color: overlayColor,
+                color: config.overlayColor,
               ),
             ),
           ),
-        if (config?.customWidget != null)
-          (config?.customWidget is Positioned)
-              ? config!.customWidget!
+        if (config.customWidget != null)
+          (config.customWidget is Positioned)
+              ? config.customWidget!
               : Positioned(
                   left: content.customWidgetPosition.dx +
-                      config!.customWidgetOffset.dx,
+                      config.customWidgetOffset.dx,
                   top: content.customWidgetPosition.dy +
                       config.customWidgetOffset.dy,
                   child: config.customWidget!,
                 ),
         // Texte du tutoriel
-        if (config?.title != null)
+        if (config.title != null)
           Positioned(
             left: content.titlePosition.dx +
-                (config!.titleOffset.dx), // Décalage personnalisé
+                (config.titleOffset.dx), // Décalage personnalisé
             top: content.titlePosition.dy +
                 (config.titleOffset.dy), // Décalage personnalisé
             child: DefaultTextStyle(
@@ -152,10 +160,10 @@ class TutorialHandler {
               child: Text(config.title!),
             ),
           ),
-        if (config?.description != null)
+        if (config.description != null)
           Positioned(
             left: content.descriptionPosition.dx +
-                (config!.descriptionOffset.dx), // Décalage personnalisé
+                (config.descriptionOffset.dx), // Décalage personnalisé
             top: content.descriptionPosition.dy +
                 (config.descriptionOffset.dy), // Décalage personnalisé
             child: DefaultTextStyle(
@@ -164,7 +172,8 @@ class TutorialHandler {
               child: Text(config.description!),
             ),
           ),
-        if (nextButton != null) _buildNextButton(content, child: nextButton),
+        if (config.nextButton != null)
+          _buildNextButton(content, child: config.nextButton),
       ],
     );
   }
@@ -186,18 +195,72 @@ class TutorialHandler {
     );
   }
 
+  OverlayContent? createFullScreenOverlayContent(
+      BuildContext context, TutorialStepWithID tutorialStep) {
+    Size screen = MediaQuery.of(context).size;
+
+    OverlayConfig? config =
+        tutorialStep.loadFromRepository?.call()?.overlayConfig;
+
+    if (config == null) {
+      return null;
+    }
+
+    // Calculate the centered positions for title, description, and custom widget
+    Size tutorialTitleTextSize = config.title != null
+        ? _calculateTextSize(context, config.title!)
+        : Size.zero;
+    Size tutorialDescriptionTextSize = config.description != null
+        ? _calculateTextSize(context, config.description!)
+        : Size.zero;
+
+    Offset centerTitlePosition = Offset(
+      (screen.width - tutorialTitleTextSize.width) / 2,
+      (screen.height / 2) - tutorialTitleTextSize.height - 20, // Above center
+    );
+
+    Offset centerDescriptionPosition = Offset(
+      (screen.width - tutorialDescriptionTextSize.width) / 2,
+      (screen.height / 2) + 20, // Below center
+    );
+
+    Offset centerCustomWidgetPosition = Offset(
+      screen.width / 2,
+      screen.height / 2,
+    );
+
+    Offset centerButtonPosition = Offset(
+      (screen.width - buttonWidth) / 2,
+      (screen.height / 2) + 60, // Below description
+    );
+
+    return OverlayContent(
+      exclusionRect: null, // No exclusion rect for full-screen overlay
+      titlePosition: centerTitlePosition,
+      descriptionPosition: centerDescriptionPosition,
+      customWidgetPosition: centerCustomWidgetPosition,
+      buttonPosition: centerButtonPosition,
+      exclusionBorderRadius: 0, // No border radius needed
+    );
+  }
+
   OverlayContent? createHighlightOverlayContent(
     BuildContext context,
     TutorialStepWithID tutorialStep,
   ) {
     OverlayConfig? config =
         tutorialStep.loadFromRepository?.call()?.overlayConfig;
+
     if (config == null) {
       return null;
     }
 
+    if (config.widgetKey == null) {
+      return createFullScreenOverlayContent(context, tutorialStep);
+    }
+
     RenderBox widgetRenderBox =
-        config.widgetKey.currentContext!.findRenderObject() as RenderBox;
+        config.widgetKey!.currentContext!.findRenderObject() as RenderBox;
     Offset widgetPosition = widgetRenderBox.localToGlobal(Offset.zero);
     double widgetCenterX = widgetPosition.dx + widgetRenderBox.size.width / 2;
     Size tutorialTitleTextSize = Size.zero;
@@ -262,7 +325,7 @@ class TutorialHandler {
 }
 
 class OverlayContent {
-  final Rect exclusionRect;
+  final Rect? exclusionRect;
   final Offset titlePosition;
   final Offset descriptionPosition;
   final Offset customWidgetPosition;

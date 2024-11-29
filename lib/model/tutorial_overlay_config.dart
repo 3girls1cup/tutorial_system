@@ -14,10 +14,12 @@ enum Position {
 
 class OverlayConfig {
   OverlayConfig({
-    required this.widgetKey,
+    this.widgetKey,
+    bool nextOnTap = false,
     this.title,
     this.description,
     this.customWidget,
+    this.nextButton,
     this.rounded = false,
     this.overlayColor = const Color.fromRGBO(0, 0, 0, 0.5),
     this.titleStyle,
@@ -32,14 +34,17 @@ class OverlayConfig {
     Offset? descriptionOffset,
     Offset? customWidgetOffset,
     this.exclusionBorderRadius = 8.0,
-  })  : titleOffset = titleOffset ?? getDefaultOffset(titlePosition),
+  })  : nextOnTap = widgetKey == null ? true : nextOnTap,
+        titleOffset = titleOffset ?? getDefaultOffset(titlePosition),
         descriptionOffset =
             descriptionOffset ?? getDefaultOffset(descriptionPosition),
         customWidgetOffset =
             customWidgetOffset ?? getDefaultOffset(customWidgetPosition);
 
   final bool rounded;
-  final GlobalKey widgetKey;
+  final GlobalKey? widgetKey;
+  final bool nextOnTap;
+  final Widget? nextButton;
   final Color overlayColor;
   final bool animateBreathing;
   final double breathingScale;
