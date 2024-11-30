@@ -194,8 +194,9 @@ class WidgetHighlightTutorialStep extends TutorialStepWithID {
   /// a warning is printed in debug mode.
   @override
   Future<void> execute(TutorialNotifier? tutorialNotifier) async {
-    GlobalKey? widgetKey = loadFromRepository?.call()?.overlayConfig?.widgetKey;
-    if (widgetKey == null) {
+    List<GlobalKey>? widgetKey =
+        loadFromRepository?.call()?.overlayConfig?.widgetKeys;
+    if (widgetKey == null || widgetKey.isEmpty) {
       if (kDebugMode) {
         print(
             "TUTORIAL WARNING: Highlight step invoked without widget key registered: Widget $tutorialID");
@@ -236,7 +237,6 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
   Future<bool> performConditionCheck() async {
     Stream<bool> Function()? conditionStreamFunction =
         loadFromRepository?.call()?.streamCondition;
-    print(tutorialID);
 
     if (conditionStreamFunction != null) {
       final completer = Completer<bool>();
@@ -327,12 +327,12 @@ class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
   @override
   Future<bool> performConditionCheck() async {
     return TutorialStepWithWaiting.conditionWithTimeout(timeout, () {
-      GlobalKey? widgetKey =
-          loadFromRepository?.call()?.overlayConfig?.widgetKey;
-      if (widgetKey == null) {
+      List<GlobalKey>? widgetKeys =
+          loadFromRepository?.call()?.overlayConfig?.widgetKeys;
+      if (widgetKeys == null || widgetKeys.isEmpty) {
         return false;
       }
-      return widgetKey.currentContext != null;
+      return widgetKeys.every((key) => key.currentContext != null);
     });
   }
 

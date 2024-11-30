@@ -4,19 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:tutorial_system/presentation/exclusion_clipper.dart';
 
 class AnimatedExclusionZone extends StatefulWidget {
-  final Rect exclusionRect;
+  final List<Rect> exclusionRects; // Liste des zones d'exclusion
   final double breathingScale;
   final double borderRadius;
   final Duration breathingDuration;
   final Color overlayColor;
+  final bool round;
 
   const AnimatedExclusionZone({
     super.key,
-    required this.exclusionRect,
+    required this.exclusionRects,
     this.borderRadius = 8.0,
     this.breathingScale = 1.1,
     required this.breathingDuration,
     required this.overlayColor,
+    required this.round,
   });
 
   @override
@@ -52,14 +54,18 @@ class _AnimatedExclusionZoneState extends State<AnimatedExclusionZone>
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, child) {
-        final scaledRect = Rect.fromCenter(
-          center: widget.exclusionRect.center,
-          width: widget.exclusionRect.width * _animation.value,
-          height: widget.exclusionRect.height * _animation.value,
-        );
+        // Calculer les rectangles agrandis pour chaque zone
+        final scaledRects = widget.exclusionRects.map((rect) {
+          return Rect.fromCenter(
+            center: rect.center,
+            width: rect.width * _animation.value,
+            height: rect.height * _animation.value,
+          );
+        }).toList();
 
         return ClipPath(
-          clipper: ExclusionClipper(scaledRect, widget.borderRadius),
+          clipper:
+              ExclusionClipper(scaledRects, widget.borderRadius, widget.round),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
             child: Container(

@@ -14,8 +14,8 @@ enum Position {
 
 class OverlayConfig {
   OverlayConfig({
-    this.widgetKey,
-    bool nextOnTap = false,
+    this.widgetKeys = const [],
+    this.nextOnTap = false,
     this.title,
     this.description,
     this.customWidget,
@@ -34,15 +34,14 @@ class OverlayConfig {
     Offset? descriptionOffset,
     Offset? customWidgetOffset,
     this.exclusionBorderRadius = 8.0,
-  })  : nextOnTap = widgetKey == null ? true : nextOnTap,
-        titleOffset = titleOffset ?? getDefaultOffset(titlePosition),
+  })  : titleOffset = titleOffset ?? getDefaultOffset(titlePosition),
         descriptionOffset =
             descriptionOffset ?? getDefaultOffset(descriptionPosition),
         customWidgetOffset =
             customWidgetOffset ?? getDefaultOffset(customWidgetPosition);
 
   final bool rounded;
-  final GlobalKey? widgetKey;
+  final List<GlobalKey> widgetKeys;
   final bool nextOnTap;
   final Widget? nextButton;
   final Color overlayColor;
@@ -111,29 +110,66 @@ class OverlayConfig {
   }
 
   OverlayConfig copyWith({
-    OverlayConfig? other,
+    OverlayConfig?
+        other, // Une autre instance d'OverlayConfig à utiliser comme base
+    List<GlobalKey>? widgetKey,
+    bool? nextOnTap,
     String? title,
     String? description,
-    String? imageUrl,
     Widget? customWidget,
+    Widget? nextButton,
     bool? rounded,
-    GlobalKey? widgetKey,
+    Color? overlayColor,
+    TextStyle? titleStyle,
+    TextStyle? descriptionStyle,
+    bool? animateBreathing,
+    Duration? breathingDuration,
+    double? breathingScale,
+    Position? titlePosition,
+    Position? descriptionPosition,
+    Position? customWidgetPosition,
+    Offset? titleOffset,
+    Offset? descriptionOffset,
+    Offset? customWidgetOffset,
+    double? exclusionBorderRadius,
   }) {
-    if (other != null) {
-      return OverlayConfig(
-        title: other.title ?? this.title,
-        description: other.description ?? this.description,
-        customWidget: other.customWidget ?? this.customWidget,
-        rounded: other.rounded,
-        widgetKey: other.widgetKey,
-      );
-    }
     return OverlayConfig(
-      title: title ?? this.title,
-      description: description ?? this.description,
-      customWidget: customWidget ?? this.customWidget,
-      rounded: rounded ?? this.rounded,
-      widgetKey: widgetKey ?? this.widgetKey,
+      widgetKeys: widgetKey ?? other?.widgetKeys ?? this.widgetKeys,
+      nextOnTap: nextOnTap ?? other?.nextOnTap ?? this.nextOnTap,
+      title: title ?? other?.title ?? this.title,
+      description: description ?? other?.description ?? this.description,
+      customWidget: customWidget ?? other?.customWidget ?? this.customWidget,
+      nextButton: nextButton ?? other?.nextButton ?? this.nextButton,
+      rounded: rounded ?? other?.rounded ?? this.rounded,
+      overlayColor: overlayColor ?? other?.overlayColor ?? this.overlayColor,
+      titleStyle: titleStyle ?? other?.titleStyle ?? this.titleStyle,
+      descriptionStyle:
+          descriptionStyle ?? other?.descriptionStyle ?? this.descriptionStyle,
+      animateBreathing:
+          animateBreathing ?? other?.animateBreathing ?? this.animateBreathing,
+      breathingDuration: breathingDuration ??
+          other?.breathingDuration ??
+          this.breathingDuration,
+      breathingScale:
+          breathingScale ?? other?.breathingScale ?? this.breathingScale,
+      titlePosition:
+          titlePosition ?? other?.titlePosition ?? this.titlePosition,
+      descriptionPosition: descriptionPosition ??
+          other?.descriptionPosition ??
+          this.descriptionPosition,
+      customWidgetPosition: customWidgetPosition ??
+          other?.customWidgetPosition ??
+          this.customWidgetPosition,
+      titleOffset: titleOffset ?? other?.titleOffset ?? this.titleOffset,
+      descriptionOffset: descriptionOffset ??
+          other?.descriptionOffset ??
+          this.descriptionOffset,
+      customWidgetOffset: customWidgetOffset ??
+          other?.customWidgetOffset ??
+          this.customWidgetOffset,
+      exclusionBorderRadius: exclusionBorderRadius ??
+          other?.exclusionBorderRadius ??
+          this.exclusionBorderRadius,
     );
   }
 }

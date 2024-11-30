@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:tutorial_system/model/tutorial_overlay_config.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
-final tutorialRepositoryProvider = Provider<TutorialRepository>(
-  (ref) => TutorialRepository(GlobalKey<NavigatorState>()),
-);
+final tutorialRepositoryProvider = Provider<TutorialRepository>((ref) {
+  return TutorialRepository(GlobalKey<NavigatorState>());
+});
 
 /// A repository class for managing tutorial-related data and functions.
 ///
@@ -13,7 +13,7 @@ final tutorialRepositoryProvider = Provider<TutorialRepository>(
 /// including widget keys, conditions, contexts, and tutorial containers.
 class TutorialRepository {
   /// The global navigator key used for navigation in the app.
-  final GlobalKey<NavigatorState> globalNavigatorKey;
+  GlobalKey<NavigatorState> globalNavigatorKey;
 
   final Map<TutorialID, Stream<bool> Function()> _conditionStreamMap;
 
@@ -51,6 +51,10 @@ class TutorialRepository {
       result[tutorialContainer.runtimeType] = tutorialContainer;
     }
     return result;
+  }
+
+  void setNewNavigationKey(GlobalKey<NavigatorState> key) {
+    globalNavigatorKey = key;
   }
 
   /// Adds tutorial containers dynamically even after the [TutorialRepository] was created

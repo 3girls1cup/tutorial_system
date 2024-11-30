@@ -3,15 +3,12 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tutorial_system/presentation/animated_exclusion_zone.dart';
-import 'package:tutorial_system/presentation/exclusion_clipper.dart';
 import 'package:tutorial_system/src/util/size_config.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
 class TutorialHandler {
   final TutorialRepository _tutorialRepository;
   final TutorialNotifier tutorialNotifier;
-  final WidgetRef ref;
 
   OverlayEntry? overlayEntry;
 
@@ -23,7 +20,7 @@ class TutorialHandler {
       fontSize: 14.0, color: Colors.white, fontWeight: FontWeight.bold);
 
   TutorialHandler(
-      TutorialRunner tutorialRunner, this._tutorialRepository, this.ref)
+      TutorialRunner tutorialRunner, this._tutorialRepository, dynamic ref)
       : tutorialNotifier = ref.read(tutorialProvider(tutorialRunner).notifier);
 
   void startTutorial() {
@@ -97,36 +94,79 @@ class TutorialHandler {
     }
   }
 
+  Widget buildFullOverlayContent(
+      BuildContext context, OverlayContent content, OverlayConfig config) {
+    return GestureDetector(
+      onTap: config.nextOnTap ? nextTutorialElement : null,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+            child: Container(
+              width: SizeConfig.screenWidth(context),
+              height: SizeConfig.screenHeight(context),
+              color: config.overlayColor,
+            ),
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (config.title != null)
+                DefaultTextStyle(
+                  style: config.titleStyle ??
+                      const TextStyle(fontSize: 18, color: Colors.white),
+                  child: Text(config.title!),
+                ),
+              if (config.customWidget != null) config.customWidget!
+            ],
+          ),
+          if (config.description != null)
+            Positioned(
+              left: content.descriptionPosition.dx +
+                  (config.descriptionOffset.dx), // Décalage personnalisé
+              top: content.descriptionPosition.dy +
+                  (config.descriptionOffset.dy), // Décalage personnalisé
+              child: DefaultTextStyle(
+                style: config.descriptionStyle ??
+                    const TextStyle(fontSize: 14, color: Colors.white),
+                child: Text(config.description!),
+              ),
+            ),
+          _buildNextButton(content, child: config.nextButton),
+        ],
+      ),
+    );
+  }
+
   Widget buildOverlayContent(
       BuildContext context, OverlayContent content, OverlayConfig config) {
     if (kIsWeb) {
       //TODO : Web will not work very well probably
     }
+
+    if (content.exclusionRects == null) {
+      return buildFullOverlayContent(context, content, config);
+    }
+
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        if (content.exclusionRect == null)
-          GestureDetector(
-            onTap: config.nextOnTap ? () => nextTutorialElement : null,
-            child: Container(
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              color: config.overlayColor,
-            ),
-          )
-        else if (config.animateBreathing == true)
+        if (config.animateBreathing == true)
           AnimatedExclusionZone(
-            exclusionRect: content.exclusionRect!,
+            exclusionRects: content.exclusionRects!,
             borderRadius: content.exclusionBorderRadius,
             breathingDuration: config.breathingDuration,
             breathingScale: config.breathingScale,
             overlayColor: config.overlayColor,
+            round: config.rounded,
           )
         else
           ClipPath(
             clipper: ExclusionClipper(
-              content.exclusionRect!,
+              content.exclusionRects!,
               content.exclusionBorderRadius,
+              config.rounded,
             ),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
@@ -235,7 +275,7 @@ class TutorialHandler {
     );
 
     return OverlayContent(
-      exclusionRect: null, // No exclusion rect for full-screen overlay
+      exclusionRects: null, // No exclusion rect for full-screen overlay
       titlePosition: centerTitlePosition,
       descriptionPosition: centerDescriptionPosition,
       customWidgetPosition: centerCustomWidgetPosition,
@@ -255,52 +295,55 @@ class TutorialHandler {
       return null;
     }
 
-    if (config.widgetKey == null) {
+    if (config.widgetKeys.isEmpty) {
       return createFullScreenOverlayContent(context, tutorialStep);
     }
 
-    RenderBox widgetRenderBox =
-        config.widgetKey!.currentContext!.findRenderObject() as RenderBox;
-    Offset widgetPosition = widgetRenderBox.localToGlobal(Offset.zero);
-    double widgetCenterX = widgetPosition.dx + widgetRenderBox.size.width / 2;
-    Size tutorialTitleTextSize = Size.zero;
-    Size tutorialDescriptionTextSize = Size.zero;
-    if (config.title != null) {
-      tutorialTitleTextSize = _calculateTextSize(context, config.title!);
-    }
+    // Obtenir toutes les positions et tailles des widgets
+    List<RenderBox> widgetRenderBoxes = config.widgetKeys
+        .map((key) => key.currentContext!.findRenderObject() as RenderBox)
+        .toList();
 
-    if (config.description != null) {
-      tutorialDescriptionTextSize =
-          _calculateTextSize(context, config.description!);
-    }
+    List<Rect> exclusionRects = widgetRenderBoxes.map((renderBox) {
+      Offset widgetPosition = renderBox.localToGlobal(Offset.zero);
+      return Rect.fromLTWH(
+        widgetPosition.dx - overlayOffset.dx,
+        widgetPosition.dy - overlayOffset.dy,
+        renderBox.size.width + overlayOffset.dx * 2,
+        renderBox.size.height + overlayOffset.dy * 2,
+      );
+    }).toList();
 
-    double clippingLeftPosition = widgetPosition.dx - overlayOffset.dx;
-    double clippingTopPosition = widgetPosition.dy - overlayOffset.dy;
-    double clippingWidth = widgetRenderBox.size.width + overlayOffset.dx * 2;
-    double clippingHeight = widgetRenderBox.size.height + overlayOffset.dy * 2;
+    // Calcul du premier widget pour positionner le texte et d'autres éléments
+    RenderBox firstRenderBox = widgetRenderBoxes.first;
+    Offset widgetPosition = firstRenderBox.localToGlobal(Offset.zero);
+    double widgetCenterX = widgetPosition.dx + firstRenderBox.size.width / 2;
+
+    // Calcul des tailles de texte pour titre et description
+    Size tutorialTitleTextSize = config.title != null
+        ? _calculateTextSize(context, config.title!)
+        : Size.zero;
+    Size tutorialDescriptionTextSize = config.description != null
+        ? _calculateTextSize(context, config.description!)
+        : Size.zero;
 
     return OverlayContent(
-      exclusionRect: Rect.fromLTWH(
-        clippingLeftPosition,
-        clippingTopPosition,
-        clippingWidth,
-        clippingHeight,
-      ),
+      exclusionRects: exclusionRects, // Liste des zones d'exclusion
       titlePosition: Offset(
         widgetCenterX - tutorialTitleTextSize.width / 2,
-        clippingTopPosition - tutorialTitleTextSize.height,
+        widgetPosition.dy - tutorialTitleTextSize.height - overlayOffset.dy,
       ),
       descriptionPosition: Offset(
         widgetCenterX - tutorialDescriptionTextSize.width / 2,
-        clippingTopPosition + clippingHeight,
+        widgetPosition.dy + firstRenderBox.size.height + overlayOffset.dy,
       ),
       customWidgetPosition: Offset(
         widgetCenterX,
-        clippingTopPosition,
+        widgetPosition.dy + firstRenderBox.size.height / 2,
       ),
       buttonPosition: Offset(
         widgetCenterX - buttonWidth / 2,
-        widgetPosition.dy + widgetRenderBox.size.height,
+        widgetPosition.dy + firstRenderBox.size.height + overlayOffset.dy * 2,
       ),
 
       exclusionBorderRadius: config.exclusionBorderRadius, // Bordures arrondies
@@ -325,7 +368,7 @@ class TutorialHandler {
 }
 
 class OverlayContent {
-  final Rect? exclusionRect;
+  final List<Rect>? exclusionRects;
   final Offset titlePosition;
   final Offset descriptionPosition;
   final Offset customWidgetPosition;
@@ -333,7 +376,7 @@ class OverlayContent {
   final double exclusionBorderRadius;
 
   OverlayContent({
-    required this.exclusionRect,
+    required this.exclusionRects,
     required this.titlePosition,
     required this.descriptionPosition,
     required this.customWidgetPosition,
