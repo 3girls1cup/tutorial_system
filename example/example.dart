@@ -168,23 +168,19 @@ extension _ExampleTutorialExt on _MyHomePageState {
     }
 
     final overlayConfig = OverlayConfig(
-      title: "Cliquez ici",
-      description: "Cette zone met en avant un bouton important.",
       overlayColor: Colors.black.withOpacity(0.6),
       customWidget: const Icon(Icons.star,
           size: 50, color: Colors.yellow), // Widget personnalisé
       animateBreathing: true,
       breathingDuration: const Duration(milliseconds: 300),
-      titleStyle: const TextStyle(fontSize: 20, color: Colors.yellow),
       exclusionBorderRadius: 12.0, // Bordures arrondies
-      widgetKeys: [_biteKey],
     );
 
     final TutorialRepository tutorialRepository =
         ref.read(tutorialRepositoryProvider);
     tutorialRepository.registerAllConfigs({
       ExampleTutorialID.floatingButtonKey: overlayConfig,
-      ExampleTutorialID.bite: overlayConfig.copyWith(widgetKey: [_biteKey]),
+      ExampleTutorialID.bite: overlayConfig.copyWith(),
     });
     tutorialRepository.registerFutureCondition(
         ExampleTutorialID.floatingButtonKey, (timeout) {

@@ -194,12 +194,12 @@ class WidgetHighlightTutorialStep extends TutorialStepWithID {
   /// a warning is printed in debug mode.
   @override
   Future<void> execute(TutorialNotifier? tutorialNotifier) async {
-    List<GlobalKey>? widgetKey =
-        loadFromRepository?.call()?.overlayConfig?.widgetKeys;
-    if (widgetKey == null || widgetKey.isEmpty) {
+    List<ExclusionZone>? exclusionZones =
+        loadFromRepository?.call()?.overlayConfig?.exclusionZones;
+    if (exclusionZones == null || exclusionZones.isEmpty) {
       if (kDebugMode) {
         print(
-            "TUTORIAL WARNING: Highlight step invoked without widget key registered: Widget $tutorialID");
+            "TUTORIAL WARNING: Highlight step invoked without exclusion Zone registered: Widget $tutorialID");
       }
     }
   }
@@ -210,10 +210,9 @@ class WidgetHighlightTutorialStep extends TutorialStepWithID {
       {required TutorialRepository tutorialRepository}) {
     OverlayConfig? overlayConfig = loadFromRepository?.call()?.overlayConfig;
     if (overlayConfig != null &&
-        (overlayConfig.title != null ||
-            overlayConfig.description != null ||
-            overlayConfig.customWidget != null)) {
-      throw Exception("Tutorial text or widget content must be provided.");
+        (overlayConfig.exclusionZones.isEmpty &&
+            overlayConfig.customWidget == null)) {
+      throw Exception("Exclusion zone or widget content must be provided.");
     }
     return WidgetHighlightTutorialStep(
         tutorialID: tutorialID,
@@ -327,12 +326,13 @@ class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
   @override
   Future<bool> performConditionCheck() async {
     return TutorialStepWithWaiting.conditionWithTimeout(timeout, () {
-      List<GlobalKey>? widgetKeys =
-          loadFromRepository?.call()?.overlayConfig?.widgetKeys;
-      if (widgetKeys == null || widgetKeys.isEmpty) {
+      List<ExclusionZone>? exclusionZones =
+          loadFromRepository?.call()?.overlayConfig?.exclusionZones;
+      if (exclusionZones == null || exclusionZones.isEmpty) {
         return false;
       }
-      return widgetKeys.every((key) => key.currentContext != null);
+      return exclusionZones
+          .every((zone) => zone.widgetKey.currentContext != null);
     });
   }
 

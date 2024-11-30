@@ -1,24 +1,17 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:tutorial_system/model/tutorial_overlay_config.dart';
 import 'package:tutorial_system/presentation/exclusion_clipper.dart';
 
 class AnimatedExclusionZone extends StatefulWidget {
-  final List<Rect> exclusionRects; // Liste des zones d'exclusion
-  final double breathingScale;
-  final double borderRadius;
-  final Duration breathingDuration;
+  final List<ExclusionZone> zones; // Liste des zones d'exclusion
   final Color overlayColor;
-  final bool round;
 
   const AnimatedExclusionZone({
     super.key,
-    required this.exclusionRects,
-    this.borderRadius = 8.0,
-    this.breathingScale = 1.1,
-    required this.breathingDuration,
+    required this.zones,
     required this.overlayColor,
-    required this.round,
   });
 
   @override
@@ -26,54 +19,75 @@ class AnimatedExclusionZone extends StatefulWidget {
 }
 
 class _AnimatedExclusionZoneState extends State<AnimatedExclusionZone>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
+    with TickerProviderStateMixin {
+  late List<AnimationController> _controllers;
+  late List<Animation<double>> _animations;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.breathingDuration,
-    )..repeat(reverse: true);
 
-    _animation = Tween<double>(begin: 1.0, end: widget.breathingScale).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    // Créer un AnimationController et une animation pour chaque zone
+    _controllers = widget.zones.map((zone) {
+      return AnimationController(
+        vsync: this,
+        duration: zone.breathingDuration ?? const Duration(seconds: 2),
+      )..repeat(reverse: true);
+    }).toList();
+
+    _animations = List.generate(widget.zones.length, (index) {
+      final zone = widget.zones[index];
+      final controller = _controllers[index];
+      return Tween<double>(
+        begin: 1.0,
+        end: zone.breathingScale ?? 1.1,
+      ).animate(
+        CurvedAnimation(parent: controller, curve: Curves.easeInOut),
+      );
+    });
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    // Nettoyer les contrôleurs
+    for (final controller in _controllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        // Calculer les rectangles agrandis pour chaque zone
-        final scaledRects = widget.exclusionRects.map((rect) {
-          return Rect.fromCenter(
-            center: rect.center,
-            width: rect.width * _animation.value,
-            height: rect.height * _animation.value,
-          );
-        }).toList();
+    return Stack(
+      children: List.generate(widget.zones.length, (index) {
+        final zone = widget.zones[index];
+        final animation = _animations[index];
 
-        return ClipPath(
-          clipper:
-              ExclusionClipper(scaledRects, widget.borderRadius, widget.round),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-            child: Container(
-              color: widget.overlayColor,
-            ),
-          ),
+        return AnimatedBuilder(
+          animation: animation,
+          builder: (context, child) {
+            final scaledRect = Rect.fromCenter(
+              center: zone.rect!.center,
+              width: zone.rect!.width * animation.value,
+              height: zone.rect!.height * animation.value,
+            );
+
+            return ClipPath(
+              clipper: ExclusionClipper(
+                [scaledRect],
+                zone.exclusionBorderRadius ?? 8.0,
+                zone.rounded ?? false,
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+                child: Container(
+                  color: widget.overlayColor,
+                ),
+              ),
+            );
+          },
         );
-      },
+      }),
     );
   }
 }

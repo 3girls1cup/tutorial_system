@@ -58,7 +58,10 @@ class TutorialAwareWidget extends ConsumerWidget {
 
     if (tutorialKeyIDs != null) {
       tutorialRepository.registerAllConfigs(Map.fromEntries(tutorialKeyIDs!.map(
-          (keyID) => MapEntry(keyID, OverlayConfig(widgetKeys: [globKey])))));
+          (keyID) => MapEntry(
+              keyID,
+              OverlayConfig(
+                  exclusionZones: [ExclusionZone(widgetKey: globKey)])))));
     }
 
     if (tutorialContextIDs != null) {
