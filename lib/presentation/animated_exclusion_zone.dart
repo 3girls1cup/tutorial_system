@@ -27,11 +27,12 @@ class _AnimatedExclusionZoneState extends State<AnimatedExclusionZone>
   void initState() {
     super.initState();
 
-    // Créer un AnimationController et une animation pour chaque zone
+    // Initialiser les AnimationController et les animations pour chaque zone
     _controllers = widget.zones.map((zone) {
+      final duration = zone.breathingDuration!;
       return AnimationController(
         vsync: this,
-        duration: zone.breathingDuration ?? const Duration(seconds: 2),
+        duration: duration, // Par défaut ou personnalisé
       )..repeat(reverse: true);
     }).toList();
 
@@ -40,7 +41,7 @@ class _AnimatedExclusionZoneState extends State<AnimatedExclusionZone>
       final controller = _controllers[index];
       return Tween<double>(
         begin: 1.0,
-        end: zone.breathingScale ?? 1.1,
+        end: zone.breathingScale,
       ).animate(
         CurvedAnimation(parent: controller, curve: Curves.easeInOut),
       );
@@ -49,7 +50,7 @@ class _AnimatedExclusionZoneState extends State<AnimatedExclusionZone>
 
   @override
   void dispose() {
-    // Nettoyer les contrôleurs
+    // Nettoyer tous les AnimationController
     for (final controller in _controllers) {
       controller.dispose();
     }
@@ -59,24 +60,29 @@ class _AnimatedExclusionZoneState extends State<AnimatedExclusionZone>
   @override
   Widget build(BuildContext context) {
     return Stack(
-      children: List.generate(widget.zones.length, (index) {
-        final zone = widget.zones[index];
-        final animation = _animations[index];
-
-        return AnimatedBuilder(
-          animation: animation,
+      children: [
+        AnimatedBuilder(
+          animation: Listenable.merge(_controllers), // Merge all animations
           builder: (context, child) {
-            final scaledRect = Rect.fromCenter(
-              center: zone.rect!.center,
-              width: zone.rect!.width * animation.value,
-              height: zone.rect!.height * animation.value,
-            );
+            // Calculer les rectangles agrandis pour chaque zone
+            final scaledRects = widget.zones.asMap().entries.map((entry) {
+              final index = entry.key;
+              final zone = entry.value;
+              final rect = zone.rect!;
+              final animation = _animations[index];
+
+              return Rect.fromCenter(
+                center: rect.center,
+                width: rect.width * animation.value,
+                height: rect.height * animation.value,
+              );
+            }).toList();
 
             return ClipPath(
               clipper: ExclusionClipper(
-                [scaledRect],
-                zone.exclusionBorderRadius ?? 8.0,
-                zone.rounded ?? false,
+                scaledRects,
+                widget.zones.first.exclusionBorderRadius!,
+                widget.zones.first.rounded!,
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
@@ -86,8 +92,8 @@ class _AnimatedExclusionZoneState extends State<AnimatedExclusionZone>
               ),
             );
           },
-        );
-      }),
+        ),
+      ],
     );
   }
 }

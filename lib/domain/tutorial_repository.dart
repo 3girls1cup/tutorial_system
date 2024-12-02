@@ -24,7 +24,7 @@ class TutorialRepository {
   final Map<TutorialID, OverlayConfig> _configMap;
 
   /// A map of [TutorialID]s to their corresponding condition functions.
-  final Map<TutorialID, Future<bool> Function(Duration)> _conditionMap;
+  final Map<TutorialID, bool Function()> _conditionMap;
 
   /// A map of [TutorialID]s to their corresponding [BuildContext]s.
   final Map<TutorialID, BuildContext> _contextMap;
@@ -36,7 +36,7 @@ class TutorialRepository {
   TutorialRepository(this.globalNavigatorKey,
       {List<Tutorial>? tutorialContainers,
       Map<TutorialID, OverlayConfig>? keyMap,
-      Map<TutorialID, Future<bool> Function(Duration)>? conditionMap,
+      Map<TutorialID, bool Function()>? conditionMap,
       Map<TutorialID, Stream<bool> Function()>? conditionStreamMap,
       Map<TutorialID, BuildContext>? contextMap})
       : _tutorialContainers = _getTypedMap(tutorialContainers),
@@ -106,8 +106,8 @@ class TutorialRepository {
   }
 
   /// Registers a condition function for a specific [TutorialID].
-  void registerFutureCondition(TutorialID conditionID,
-      Future<bool> Function(Duration timeout) condition) {
+  void registerFutureCondition(
+      TutorialID conditionID, bool Function() condition) {
     _conditionMap[conditionID] = condition;
   }
 
@@ -127,7 +127,7 @@ class TutorialRepository {
 
   /// Registers multiple condition functions at once.
   void registerAllFutureConditions(
-      Map<TutorialID, Future<bool> Function(Duration timeout)> conditions) {
+      Map<TutorialID, bool Function()> conditions) {
     _conditionMap.addAll(conditions);
   }
 
@@ -137,7 +137,7 @@ class TutorialRepository {
   }
 
   /// Retrieves a condition function for a specific [TutorialID].
-  Future<bool> Function(Duration)? getCondition(TutorialID conditionID) {
+  bool Function()? getCondition(TutorialID conditionID) {
     return _conditionMap[conditionID];
   }
 
@@ -195,14 +195,14 @@ class TutorialRepository {
   /// Returns null if the [TutorialID] is not found in any map.
   TutorialRegistration get(TutorialID tutorialID) {
     OverlayConfig? key;
-    Future<bool> Function(Duration)? condition;
+    bool Function()? condition;
     BuildContext? context;
     Stream<bool> Function()? streamCondition;
     if (_configMap.containsKey(tutorialID)) {
       key = _configMap[tutorialID] as OverlayConfig;
     }
     if (_conditionMap.containsKey(tutorialID)) {
-      condition = _conditionMap[tutorialID] as Future<bool> Function(Duration);
+      condition = _conditionMap[tutorialID] as bool Function();
     }
     if (_contextMap.containsKey(tutorialID)) {
       context = _contextMap[tutorialID] as BuildContext;

@@ -2,7 +2,6 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tutorial_system/src/util/size_config.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 
@@ -17,7 +16,7 @@ class TutorialHandler {
   final double buttonHeight = 50;
 
   final TextStyle tutorialTextStyle = const TextStyle(
-      fontSize: 14.0, color: Colors.white, fontWeight: FontWeight.bold);
+      fontSize: 16.0, color: Colors.black, fontWeight: FontWeight.bold);
 
   TutorialHandler(
       TutorialRunner tutorialRunner, this._tutorialRepository, dynamic ref)
@@ -96,27 +95,51 @@ class TutorialHandler {
 
   Widget buildFullOverlayContent(
       BuildContext context, OverlayContent content, OverlayConfig config) {
+    final ValueNotifier<bool> isNextButtonActive =
+        ValueNotifier(config.delayBeforeNextButtonActive > 0 ? false : true);
+
+    if (config.delayBeforeNextButtonActive > 0) {
+      Future.delayed(Duration(seconds: config.delayBeforeNextButtonActive), () {
+        isNextButtonActive.value = true;
+      });
+    }
+
     return GestureDetector(
       onTap: config.nextOnTap ? nextTutorialElement : null,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-            child: Container(
-              width: SizeConfig.screenWidth(context),
-              height: SizeConfig.screenHeight(context),
-              color: config.overlayColor,
+      child: Material(
+        color: Colors.transparent,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+              child: Container(
+                width: SizeConfig.screenWidth(context),
+                height: SizeConfig.screenHeight(context),
+                color: config.overlayColor,
+              ),
             ),
-          ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ...content.widgets,
-            ],
-          ),
-          _buildNextButton(content, child: config.nextButton),
-        ],
+            if (config.customWidget != null) config.customWidget!,
+            if (config.nextButton != null)
+              Positioned(
+                right: 40.0,
+                bottom: 40.0,
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: isNextButtonActive,
+                  builder: (context, active, child) {
+                    return IgnorePointer(
+                      ignoring: !active,
+                      child: Opacity(
+                        opacity: active ? 1.0 : 0.5,
+                        child: _buildNextButton(content, active,
+                            child: config.nextButton),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -127,22 +150,22 @@ class TutorialHandler {
       //TODO : Web will not work very well probably
     }
 
-    if (content.exclusionRects == null) {
+    if (content.exclusionZones.isEmpty) {
       return buildFullOverlayContent(context, content, config);
     }
 
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        if (config.animateBreathing == true)
+        if (config.animate == true)
           AnimatedExclusionZone(
-            zones: content.exclusionRects,
+            zones: content.exclusionZones,
             overlayColor: config.overlayColor,
           )
         else
           ClipPath(
             clipper: ExclusionClipper(
-              content.exclusionRects.map((zone) => zone.rect!).toList(),
+              content.exclusionZones.map((zone) => zone.rect!).toList(),
               content.exclusionBorderRadius,
               config.rounded,
             ),
@@ -155,28 +178,40 @@ class TutorialHandler {
               ),
             ),
           ),
-        ...content.widgets,
+        IgnorePointer(
+          ignoring: true,
+          child: Material(
+            color: Colors.transparent,
+            child: Stack(
+              children: [
+                ...content.widgets,
+                if (config.customWidget != null) config.customWidget!,
+              ],
+            ),
+          ),
+        ),
         if (config.nextButton != null)
-          _buildNextButton(content, child: config.nextButton),
+          _buildNextButton(content, true, child: config.nextButton),
       ],
     );
   }
 
-  Widget _buildNextButton(OverlayContent content, {Widget? child}) {
-    return Positioned(
-      right: 40,
-      bottom: 40,
-      child: child ??
-          SizedBox(
+  Widget _buildNextButton(OverlayContent content, bool active,
+      {Widget? child}) {
+    return child != null
+        ? GestureDetector(
+            onTap: active ? nextTutorialElement : null,
+            child: child,
+          )
+        : SizedBox(
             width: buttonWidth,
             height: buttonHeight,
             child: ElevatedButton(
               onPressed: nextTutorialElement,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.black),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
               child: Text("Next", style: tutorialTextStyle),
             ),
-          ),
-    );
+          );
   }
 
   OverlayContent? createFullScreenOverlayContent(
@@ -189,7 +224,6 @@ class TutorialHandler {
     }
 
     return OverlayContent(
-      widgets: [config.customWidget!],
       exclusionBorderRadius: 0, // No border radius needed
     );
   }
@@ -208,7 +242,6 @@ class TutorialHandler {
     if (config.exclusionZones.isEmpty) {
       return createFullScreenOverlayContent(context, tutorialStep);
     }
-
     // Obtenir toutes les positions et tailles des widgets
     List<ExclusionZone> exclusionZonesWithRect =
         config.exclusionZones.map((zone) {
@@ -305,7 +338,7 @@ class TutorialHandler {
     }).toList();
 
     return OverlayContent(
-      exclusionRects: exclusionZonesWithRect,
+      exclusionZones: exclusionZonesWithRect,
       widgets: widgets,
       exclusionBorderRadius: config.exclusionBorderRadius,
     );
@@ -329,12 +362,12 @@ class TutorialHandler {
 }
 
 class OverlayContent {
-  final List<ExclusionZone> exclusionRects;
+  final List<ExclusionZone> exclusionZones;
   final List<Widget> widgets;
   final double exclusionBorderRadius;
 
   OverlayContent({
-    this.exclusionRects = const [],
+    this.exclusionZones = const [],
     this.widgets = const [],
     required this.exclusionBorderRadius,
   });

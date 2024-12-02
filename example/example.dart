@@ -171,7 +171,7 @@ extension _ExampleTutorialExt on _MyHomePageState {
       overlayColor: Colors.black.withOpacity(0.6),
       customWidget: const Icon(Icons.star,
           size: 50, color: Colors.yellow), // Widget personnalisé
-      animateBreathing: true,
+      animate: true,
       breathingDuration: const Duration(milliseconds: 300),
       exclusionBorderRadius: 12.0, // Bordures arrondies
     );
@@ -181,11 +181,6 @@ extension _ExampleTutorialExt on _MyHomePageState {
     tutorialRepository.registerAllConfigs({
       ExampleTutorialID.floatingButtonKey: overlayConfig,
       ExampleTutorialID.bite: overlayConfig.copyWith(),
-    });
-    tutorialRepository.registerFutureCondition(
-        ExampleTutorialID.floatingButtonKey, (timeout) {
-      return TutorialStepWithWaiting.conditionWithTimeout(
-          timeout, () => _counter > 0);
     });
   }
 }

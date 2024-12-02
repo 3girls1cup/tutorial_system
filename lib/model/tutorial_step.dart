@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:nativewrappers/_internal/vm/lib/ffi_allocation_patch.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -54,6 +55,7 @@ abstract class TutorialStepWithID extends TutorialStep {
 abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   /// The maximum duration to wait for the condition to be met.
   final Duration timeout;
+  final bool replayTimeout;
 
   /// An optional step to replay if the condition is not met within the timeout.
   final TutorialStep? replayStep;
@@ -70,6 +72,7 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   TutorialStepWithWaiting(
       {required super.tutorialID,
       super.loadFromRepository,
+      this.replayTimeout = false,
       Duration? duration,
       this.replayStep,
       void Function(TutorialNotifier?)? onFinished})
@@ -128,9 +131,12 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   ///
   /// All timers are automatically cancelled when the future completes.
   static Future<bool> conditionWithTimeout(
-      Duration timeout, bool Function() condition) async {
+      bool replayTimeout, Duration timeout, bool Function()? condition) async {
     final completer = Completer<bool>();
 
+    if (condition == null) {
+      return completer.future;
+    }
     // Immediately return true if the condition is already met
     if (condition()) {
       return true;
@@ -145,7 +151,7 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
 
     // Set a timeout timer
     final timeoutTimer = Timer(timeout, () {
-      if (!completer.isCompleted) {
+      if (!completer.isCompleted && replayTimeout) {
         completer.complete(false);
       }
     });
@@ -168,14 +174,7 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
       onFinished(tutorialNotifier);
     } else {
       // Duration exceeded and condition is not met, trigger replay if set
-      if (replayStep != null) {
-        tutorialNotifier?.replayStep(effectiveReplayStep);
-      } else {
-        if (kDebugMode) {
-          print("TUTORIAL WARNING: "
-              "TutorialStepWithWaiting duration exceeded without replay, tutorial cannot be finished.");
-        }
-      }
+      tutorialNotifier?.replayStep(effectiveReplayStep);
     }
   }
 }
@@ -241,19 +240,17 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
       final completer = Completer<bool>();
       final subscription = conditionStreamFunction().listen((event) {
         if (event) {
-          completer.complete(true);
+          completer.complete(event);
         }
       });
 
       return TutorialStepWithWaiting.conditionWithSubscription(
           timeout, completer, subscription);
     } else {
-      Future<bool> Function(Duration)? conditionFunction =
+      bool Function()? conditionFunction =
           loadFromRepository?.call()?.condition;
-      if (conditionFunction != null && await conditionFunction(timeout)) {
-        return true;
-      }
-      return false;
+      return TutorialStepWithWaiting.conditionWithTimeout(
+          replayTimeout, timeout, conditionFunction);
     }
   }
 
@@ -288,7 +285,8 @@ class WaitForContextTutorialStep extends TutorialStepWithWaiting {
   /// Checks if the loaded [BuildContext] is currently active.
   @override
   Future<bool> performConditionCheck() async {
-    return TutorialStepWithWaiting.conditionWithTimeout(timeout, () {
+    return TutorialStepWithWaiting.conditionWithTimeout(replayTimeout, timeout,
+        () {
       BuildContext? buildContext = loadFromRepository?.call()?.context;
       if (buildContext == null) {
         return false;
@@ -325,7 +323,8 @@ class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
   /// Checks if the loaded widget key has a current context, indicating visibility.
   @override
   Future<bool> performConditionCheck() async {
-    return TutorialStepWithWaiting.conditionWithTimeout(timeout, () {
+    return TutorialStepWithWaiting.conditionWithTimeout(replayTimeout, timeout,
+        () {
       List<ExclusionZone>? exclusionZones =
           loadFromRepository?.call()?.overlayConfig?.exclusionZones;
       if (exclusionZones == null || exclusionZones.isEmpty) {
