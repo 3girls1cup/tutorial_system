@@ -7,18 +7,31 @@ class TutorialRunner {
 
   TutorialRunner._internal(this.tutorialSteps);
 
-  factory TutorialRunner(Tutorial tutorialContainer, TutorialRepository tutorialRepository) {
+  factory TutorialRunner(
+      Tutorial tutorialContainer, TutorialRepository tutorialRepository) {
     List<TutorialStep> tutorialSteps = tutorialContainer.tutorialSteps;
     List<TutorialStep> tutorialStepsWithLoadingFunction = [];
 
     for (TutorialStep tutorialStep in tutorialSteps) {
       if (tutorialStep is TutorialStepWithID) {
-        tutorialStepsWithLoadingFunction.add(tutorialStep.setLoadingFunction(tutorialRepository: tutorialRepository));
+        tutorialStepsWithLoadingFunction.add(tutorialStep.setLoadingFunction(
+            tutorialRepository: tutorialRepository));
         continue;
       }
       tutorialStepsWithLoadingFunction.add(tutorialStep);
     }
     return TutorialRunner._internal(tutorialStepsWithLoadingFunction);
+  }
+
+  (TutorialStep?, int?) getPreviousStep(int? previousIndex) {
+    if (previousIndex == null) {
+      return (null, null);
+    }
+    if (previousIndex == 0) {
+      return (null, null);
+    }
+    int nextIndex = previousIndex - 1;
+    return (tutorialSteps[nextIndex], nextIndex);
   }
 
   (TutorialStep?, int?) getNextStep(int? previousIndex) {

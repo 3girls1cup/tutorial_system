@@ -104,42 +104,42 @@ class TutorialHandler {
       });
     }
 
-    return GestureDetector(
-      onTap: config.nextOnTap ? nextTutorialElement : null,
-      child: Material(
-        color: Colors.transparent,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-              child: Container(
-                width: SizeConfig.screenWidth(context),
-                height: SizeConfig.screenHeight(context),
-                color: config.overlayColor,
+    return Material(
+      color: Colors.transparent,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+            child: Container(
+              width: SizeConfig.screenWidth(context),
+              height: SizeConfig.screenHeight(context),
+              color: config.overlayColor,
+            ),
+          ),
+          if (config.customWidget != null) config.customWidget!,
+          if (config.displayNextButton)
+            Positioned(
+              right: 40.0,
+              bottom: 40.0,
+              child: ValueListenableBuilder<bool>(
+                valueListenable: isNextButtonActive,
+                builder: (context, active, child) {
+                  return Opacity(
+                    opacity: active ? 1.0 : 0.5,
+                    child: _buildNextButton(content, active,
+                        child: config.nextButton),
+                  );
+                },
               ),
             ),
-            if (config.customWidget != null) config.customWidget!,
-            if (config.nextButton != null)
-              Positioned(
-                right: 40.0,
-                bottom: 40.0,
-                child: ValueListenableBuilder<bool>(
-                  valueListenable: isNextButtonActive,
-                  builder: (context, active, child) {
-                    return IgnorePointer(
-                      ignoring: !active,
-                      child: Opacity(
-                        opacity: active ? 1.0 : 0.5,
-                        child: _buildNextButton(content, active,
-                            child: config.nextButton),
-                      ),
-                    );
-                  },
-                ),
-              ),
-          ],
-        ),
+          if (config.displayPreviousButton)
+            Positioned(
+              left: 40.0,
+              bottom: 40.0,
+              child: _buildPreviousButton(),
+            ),
+        ],
       ),
     );
   }
@@ -155,34 +155,18 @@ class TutorialHandler {
     }
 
     return Stack(
-      clipBehavior: Clip.none,
       children: [
-        if (config.animate == true)
-          AnimatedExclusionZone(
-            zones: content.exclusionZones,
-            overlayColor: config.overlayColor,
-          )
-        else
-          ClipPath(
-            clipper: ExclusionClipper(
-              content.exclusionZones.map((zone) => zone.rect!).toList(),
-              content.exclusionBorderRadius,
-              config.rounded,
-            ),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-              child: Container(
-                width: SizeConfig.screenWidth(context),
-                height: SizeConfig.screenHeight(context),
-                color: config.overlayColor,
-              ),
-            ),
-          ),
+        AnimatedExclusionZone(
+          zones: content.exclusionZones,
+          onlyScaleUp: !config.animate,
+          overlayColor: config.overlayColor,
+        ),
         IgnorePointer(
           ignoring: true,
           child: Material(
             color: Colors.transparent,
             child: Stack(
+              alignment: Alignment.center,
               children: [
                 ...content.widgets,
                 if (config.customWidget != null) config.customWidget!,
@@ -190,28 +174,62 @@ class TutorialHandler {
             ),
           ),
         ),
-        if (config.nextButton != null)
-          _buildNextButton(content, true, child: config.nextButton),
+        if (config.displayNextButton)
+          Positioned(
+              right: 40.0,
+              bottom: 40.0,
+              child: _buildNextButton(content, true, child: config.nextButton)),
+        if (config.displayPreviousButton)
+          Positioned(
+            left: 40.0,
+            bottom: 40.0,
+            child: _buildPreviousButton(),
+          ),
       ],
     );
   }
 
+  Color get btnDisabledBackground => const Color.fromARGB(255, 100, 100, 100);
+  Color get btnDisabledForeground => const Color.fromARGB(255, 200, 200, 200);
+
   Widget _buildNextButton(OverlayContent content, bool active,
       {Widget? child}) {
-    return child != null
-        ? GestureDetector(
-            onTap: active ? nextTutorialElement : null,
-            child: child,
-          )
-        : SizedBox(
-            width: buttonWidth,
-            height: buttonHeight,
-            child: ElevatedButton(
-              onPressed: nextTutorialElement,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-              child: Text("Next", style: tutorialTextStyle),
-            ),
-          );
+    return (child != null)
+        ? child
+        : buttonWithText("Next", active ? nextTutorialElement : null);
+  }
+
+  Widget _buildPreviousButton() {
+    return buttonWithText("Previous", () {
+      removeOverlayEntry();
+      tutorialNotifier.previousStep();
+    });
+  }
+
+  Widget buttonWithText(String text, VoidCallback? onPressed) {
+    return SizedBox(
+      width: buttonWidth,
+      height: buttonHeight,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          disabledBackgroundColor: btnDisabledBackground,
+          disabledForegroundColor: btnDisabledForeground,
+          backgroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          side: const BorderSide(color: Colors.black, width: 2),
+          elevation: 4,
+          shadowColor: Colors.black,
+        ),
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(text, style: tutorialTextStyle),
+        ),
+      ),
+    );
   }
 
   OverlayContent? createFullScreenOverlayContent(
@@ -342,16 +360,6 @@ class TutorialHandler {
       widgets: widgets,
       exclusionBorderRadius: config.exclusionBorderRadius,
     );
-  }
-
-  Size _calculateTextSize(BuildContext context, String text) {
-    return (TextPainter(
-      text: TextSpan(text: text, style: tutorialTextStyle),
-      maxLines: 1,
-      textScaler: MediaQuery.of(context).textScaler,
-      textDirection: TextDirection.ltr,
-    )..layout())
-        .size;
   }
 
   void removeOverlayEntry() {

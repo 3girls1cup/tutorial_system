@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:tutorial_system/model/tutorial_overlay_config.dart';
 
 class ExclusionClipper extends CustomClipper<Path> {
-  final List<Rect> exclusionRects; // Liste des zones d'exclusion
-  final double borderRadius; // Rayon des bordures arrondies
-  final bool round;
+  final List<ExclusionZone> exclusionZones; // Liste des zones d'exclusion
 
-  ExclusionClipper(this.exclusionRects, this.borderRadius, this.round);
+  ExclusionClipper(this.exclusionZones);
 
   @override
   Path getClip(Size size) {
@@ -16,17 +15,18 @@ class ExclusionClipper extends CustomClipper<Path> {
     // Créer un chemin combiné pour toutes les zones d'exclusion
     Path exclusionPaths = Path();
 
-    for (final rect in exclusionRects) {
-      if (round) {
+    for (final zone in exclusionZones) {
+      if (zone.rounded!) {
         // Créer un chemin circulaire pour chaque zone d'exclusion
         exclusionPaths.addOval(Rect.fromCircle(
-          center: rect.center,
-          radius: rect.width / 2,
+          center: zone.rect!.center,
+          radius: zone.rect!.width / 2,
         ));
       } else {
         // Créer un chemin rectangulaire arrondi pour chaque zone d'exclusion
         exclusionPaths.addRRect(
-          RRect.fromRectAndRadius(rect, Radius.circular(borderRadius)),
+          RRect.fromRectAndRadius(
+              zone.rect!, Radius.circular(zone.exclusionBorderRadius!)),
         );
       }
     }

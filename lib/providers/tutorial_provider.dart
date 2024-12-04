@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:tutorial_system/tutorial_system.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../src/util/constants.dart';
+// import '../src/util/constants.dart';
 
 class TutorialState extends Equatable {
   final int? _currentTutorialIndex;
@@ -31,12 +31,12 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
 
   TutorialNotifier(this._tutorial) : super(const TutorialState.idle());
 
-  Future<void> startTutorial() async {
-    await _progressTutorial();
+  void startTutorial() {
+    _progressTutorial();
   }
 
-  Future<void> nextStep() async {
-    await _progressTutorial();
+  void nextStep() {
+    _progressTutorial();
   }
 
   Future<void> replayStep(TutorialStep? replayStep) async {
@@ -51,14 +51,26 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     }
   }
 
-  Future<void> _progressTutorial() async {
+  void previousStep() {
+    (TutorialStep?, int?) previous =
+        _tutorial.getPreviousStep(state._currentTutorialIndex);
+    TutorialStep? previousStep = previous.$1;
+    int? previousIndex = previous.$2;
+
+    if (previousStep != null) {
+      previousStep.execute(this);
+      state = TutorialState.running(previousIndex, previousStep);
+    }
+  }
+
+  void _progressTutorial() {
     (TutorialStep?, int?) next =
         _tutorial.getNextStep(state._currentTutorialIndex);
     TutorialStep? nextStep = next.$1;
     int? nextIndex = next.$2;
 
     if (nextStep != null) {
-      await Future.delayed(Constants.waitBetweenSteps);
+      // await Future.delayed(Constants.waitBetweenSteps);
       nextStep.execute(this);
       state = TutorialState.running(nextIndex, nextStep);
     } else {

@@ -54,7 +54,8 @@ abstract class TutorialStepWithID extends TutorialStep {
 abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   /// The maximum duration to wait for the condition to be met.
   final Duration timeout;
-  final bool replayTimeout;
+  final bool timeoutActive;
+  final bool nextOnTimeout;
 
   /// An optional step to replay if the condition is not met within the timeout.
   final TutorialStep? replayStep;
@@ -71,7 +72,8 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   TutorialStepWithWaiting(
       {required super.tutorialID,
       super.loadFromRepository,
-      this.replayTimeout = false,
+      this.timeoutActive = false,
+      this.nextOnTimeout = true,
       Duration? duration,
       this.replayStep,
       void Function(TutorialNotifier?)? onFinished})
@@ -129,35 +131,41 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   /// Returns a [Future<bool>] that completes with the result of the condition check.
   ///
   /// All timers are automatically cancelled when the future completes.
-  static Future<bool> conditionWithTimeout(
-      bool replayTimeout, Duration timeout, bool Function()? condition) async {
+  static Future<bool> conditionWithTimeout(bool timeoutActive,
+      bool nextOnTimeout, Duration timeout, bool Function()? condition) async {
     final completer = Completer<bool>();
-
-    if (condition == null) {
+    Timer? timeoutTimer;
+    Timer? timer;
+    print("Timeout active: $timeoutActive");
+    if (timeoutActive) {
+      // Set a timeout timer
+      timeoutTimer = Timer(timeout, () {
+        print("Timeout reached for tutorial step");
+        if (!completer.isCompleted) {
+          completer.complete(nextOnTimeout);
+        }
+      });
+    } else if (condition == null) {
       return completer.future;
     }
-    // Immediately return true if the condition is already met
-    if (condition()) {
-      return true;
+
+    if (condition != null) {
+      // Immediately return true if the condition is already met
+      if (condition()) {
+        return true;
+      }
+
+      // Set up a periodic timer to check for the condition
+      timer = Timer.periodic(Constants.repeatConditionCheckInterval, (_) {
+        if (condition()) {
+          completer.complete(true);
+        }
+      });
     }
 
-    // Set up a periodic timer to check for the condition
-    final timer = Timer.periodic(Constants.repeatConditionCheckInterval, (_) {
-      if (condition()) {
-        completer.complete(true);
-      }
-    });
-
-    // Set a timeout timer
-    final timeoutTimer = Timer(timeout, () {
-      if (!completer.isCompleted && replayTimeout) {
-        completer.complete(false);
-      }
-    });
-
     return completer.future.then((value) {
-      timeoutTimer.cancel(); // Cancel the subscription
-      timer.cancel(); // Cancel the timer
+      timeoutTimer?.cancel(); // Cancel the subscription
+      timer?.cancel(); // Cancel the timer
       return value;
     });
   }
@@ -224,6 +232,8 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
       {required super.tutorialID,
       super.loadFromRepository,
       super.duration,
+      super.nextOnTimeout,
+      super.timeoutActive,
       super.replayStep,
       super.onFinished});
 
@@ -246,10 +256,11 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
       return TutorialStepWithWaiting.conditionWithSubscription(
           timeout, completer, subscription);
     } else {
+      print("No condition stream function found for tutorial step");
       bool Function()? conditionFunction =
           loadFromRepository?.call()?.condition;
       return TutorialStepWithWaiting.conditionWithTimeout(
-          replayTimeout, timeout, conditionFunction);
+          timeoutActive, nextOnTimeout, timeout, conditionFunction);
     }
   }
 
@@ -261,6 +272,8 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
         tutorialID: tutorialID,
         loadFromRepository: () => tutorialRepository.get(tutorialID),
         duration: timeout,
+        timeoutActive: timeoutActive,
+        nextOnTimeout: nextOnTimeout,
         replayStep: replayStep,
         onFinished: onFinished);
   }
@@ -284,8 +297,8 @@ class WaitForContextTutorialStep extends TutorialStepWithWaiting {
   /// Checks if the loaded [BuildContext] is currently active.
   @override
   Future<bool> performConditionCheck() async {
-    return TutorialStepWithWaiting.conditionWithTimeout(replayTimeout, timeout,
-        () {
+    return TutorialStepWithWaiting.conditionWithTimeout(
+        timeoutActive, nextOnTimeout, timeout, () {
       BuildContext? buildContext = loadFromRepository?.call()?.context;
       if (buildContext == null) {
         return false;
@@ -322,8 +335,8 @@ class WaitForVisibleWidgetStep extends TutorialStepWithWaiting {
   /// Checks if the loaded widget key has a current context, indicating visibility.
   @override
   Future<bool> performConditionCheck() async {
-    return TutorialStepWithWaiting.conditionWithTimeout(replayTimeout, timeout,
-        () {
+    return TutorialStepWithWaiting.conditionWithTimeout(
+        timeoutActive, nextOnTimeout, timeout, () {
       List<ExclusionZone>? exclusionZones =
           loadFromRepository?.call()?.overlayConfig?.exclusionZones;
       if (exclusionZones == null || exclusionZones.isEmpty) {

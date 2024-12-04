@@ -77,10 +77,12 @@ class OverlayConfig {
     this.nextButton,
     this.overlayColor = const Color.fromRGBO(0, 0, 0, 0.7),
     this.animate = false,
-    this.breathingDuration = const Duration(seconds: 1),
+    this.breathingDuration = const Duration(seconds: 2),
     this.breathingScale = 1.1,
     this.delayBeforeNextButtonActive = 0,
     this.exclusionBorderRadius = 8.0,
+    this.displayNextButton = true,
+    this.displayPreviousButton = true,
   }) : exclusionZones = exclusionZones
             .map((zone) => zone.copyWith(
                   rounded: rounded,
@@ -102,6 +104,8 @@ class OverlayConfig {
   final Widget? customWidget;
   final double exclusionBorderRadius;
   final int delayBeforeNextButtonActive;
+  final bool displayNextButton;
+  final bool displayPreviousButton;
 
   OverlayConfig copyWith({
     OverlayConfig?
@@ -117,6 +121,8 @@ class OverlayConfig {
     double? breathingScale,
     double? exclusionBorderRadius,
     int? delayBeforeNextButtonActive,
+    bool? displayNextButton,
+    bool? displayPreviousButton,
   }) {
     return OverlayConfig(
       exclusionZones:
@@ -138,6 +144,12 @@ class OverlayConfig {
       delayBeforeNextButtonActive: delayBeforeNextButtonActive ??
           other?.delayBeforeNextButtonActive ??
           this.delayBeforeNextButtonActive,
+      displayNextButton: displayNextButton ??
+          other?.displayNextButton ??
+          this.displayNextButton,
+      displayPreviousButton: displayPreviousButton ??
+          other?.displayPreviousButton ??
+          this.displayPreviousButton,
     );
   }
 }
