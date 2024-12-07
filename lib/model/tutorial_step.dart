@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:tutorial_system/tutorial_system.dart';
@@ -102,18 +101,26 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
   /// Returns a [Future<bool>] that completes with the result of the condition check.
   ///
   /// The [subscription] and timer are automatically cancelled when the future completes.
-  static Future<bool> conditionWithSubscription(Duration timeout,
-      Completer<bool> completer, StreamSubscription subscription) {
-    // Set a timeout to complete with false if the event doesn't occur
-    final timeoutTimer = Timer(timeout, () {
-      if (!completer.isCompleted) {
-        completer.complete(false);
-      }
-    });
+  static Future<bool> conditionWithSubscription(
+      bool timeoutActive,
+      bool nextOnTimeout,
+      Duration timeout,
+      Completer<bool> completer,
+      StreamSubscription subscription) {
+    Timer? timeoutTimer;
+
+    if (timeoutActive) {
+      // Set a timeout timer
+      timeoutTimer = Timer(timeout, () {
+        if (!completer.isCompleted) {
+          completer.complete(nextOnTimeout);
+        }
+      });
+    }
 
     return completer.future.then((value) {
       subscription.cancel(); // Cancel the subscription
-      timeoutTimer.cancel(); // Cancel the timer
+      timeoutTimer?.cancel(); // Cancel the timer
       return value;
     });
   }
@@ -136,11 +143,9 @@ abstract class TutorialStepWithWaiting extends TutorialStepWithID {
     final completer = Completer<bool>();
     Timer? timeoutTimer;
     Timer? timer;
-    print("Timeout active: $timeoutActive");
     if (timeoutActive) {
       // Set a timeout timer
       timeoutTimer = Timer(timeout, () {
-        print("Timeout reached for tutorial step");
         if (!completer.isCompleted) {
           completer.complete(nextOnTimeout);
         }
@@ -194,32 +199,10 @@ class WidgetHighlightTutorialStep extends TutorialStepWithID {
   WidgetHighlightTutorialStep(
       {required super.tutorialID, super.loadFromRepository});
 
-  /// Executes the widget highlight step.
-  ///
-  /// Attempts to load the widget key from the repository. If the key is not found,
-  /// a warning is printed in debug mode.
-  @override
-  Future<void> execute(TutorialNotifier? tutorialNotifier) async {
-    List<ExclusionZone>? exclusionZones =
-        loadFromRepository?.call()?.overlayConfig?.exclusionZones;
-    if (exclusionZones == null || exclusionZones.isEmpty) {
-      if (kDebugMode) {
-        print(
-            "TUTORIAL WARNING: Highlight step invoked without exclusion Zone registered: Widget $tutorialID");
-      }
-    }
-  }
-
   /// Sets the loading function for this step using the provided [tutorialRepository].
   @override
   WidgetHighlightTutorialStep setLoadingFunction(
       {required TutorialRepository tutorialRepository}) {
-    OverlayConfig? overlayConfig = loadFromRepository?.call()?.overlayConfig;
-    if (overlayConfig != null &&
-        (overlayConfig.exclusionZones.isEmpty &&
-            overlayConfig.customWidget == null)) {
-      throw Exception("Exclusion zone or widget content must be provided.");
-    }
     return WidgetHighlightTutorialStep(
         tutorialID: tutorialID,
         loadFromRepository: () => tutorialRepository.get(tutorialID));
@@ -247,16 +230,15 @@ class WaitForConditionTutorialStep extends TutorialStepWithWaiting {
 
     if (conditionStreamFunction != null) {
       final completer = Completer<bool>();
-      final subscription = conditionStreamFunction().listen((event) {
+      final subscription = conditionStreamFunction().listen((bool event) async {
         if (event) {
           completer.complete(event);
         }
       });
 
       return TutorialStepWithWaiting.conditionWithSubscription(
-          timeout, completer, subscription);
+          timeoutActive, nextOnTimeout, timeout, completer, subscription);
     } else {
-      print("No condition stream function found for tutorial step");
       bool Function()? conditionFunction =
           loadFromRepository?.call()?.condition;
       return TutorialStepWithWaiting.conditionWithTimeout(

@@ -39,6 +39,17 @@ class TutorialNotifier extends StateNotifier<TutorialState> {
     _progressTutorial();
   }
 
+  void skipToLastStep() {
+    (TutorialStep?, int?) last = _tutorial.getLastStep();
+    TutorialStep? lastStep = last.$1;
+    int? lastIndex = last.$2;
+
+    if (lastStep != null) {
+      lastStep.execute(this);
+      state = TutorialState.running(lastIndex, lastStep);
+    }
+  }
+
   Future<void> replayStep(TutorialStep? replayStep) async {
     TutorialStep? currentStep = state.currentTutorialStep;
 

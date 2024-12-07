@@ -16,7 +16,7 @@ class TutorialHandler {
   final double buttonHeight = 50;
 
   final TextStyle tutorialTextStyle = const TextStyle(
-      fontSize: 16.0, color: Colors.black, fontWeight: FontWeight.bold);
+      fontSize: 16.0, color: Colors.white, fontWeight: FontWeight.bold);
 
   TutorialHandler(
       TutorialRunner tutorialRunner, this._tutorialRepository, dynamic ref)
@@ -60,6 +60,11 @@ class TutorialHandler {
         _tutorialRepository.globalNavigatorKey.currentContext!;
     NavigatorState state = _tutorialRepository.globalNavigatorKey.currentState!;
     return (context, state);
+  }
+
+  void skipToLastStep() {
+    removeOverlayEntry();
+    tutorialNotifier.skipToLastStep();
   }
 
   void createOverlay(TutorialStep tutorialStep) {
@@ -133,6 +138,8 @@ class TutorialHandler {
                 },
               ),
             ),
+          if (config.displaySkipButton)
+            Positioned(top: 40, right: 40, child: _buildSkipButton()),
           if (config.displayPreviousButton)
             Positioned(
               left: 40.0,
@@ -174,6 +181,8 @@ class TutorialHandler {
             ),
           ),
         ),
+        if (config.displaySkipButton)
+          Positioned(top: 40, right: 40, child: _buildSkipButton()),
         if (config.displayNextButton)
           Positioned(
               right: 40.0,
@@ -192,6 +201,15 @@ class TutorialHandler {
   Color get btnDisabledBackground => const Color.fromARGB(255, 100, 100, 100);
   Color get btnDisabledForeground => const Color.fromARGB(255, 200, 200, 200);
 
+  Widget _buildSkipButton() {
+    return buttonWithText("Skip", () {
+      skipToLastStep();
+    },
+        backgroundColor: const Color.fromARGB(255, 73, 73, 73),
+        textStyle: tutorialTextStyle,
+        size: const Size(80, 40));
+  }
+
   Widget _buildNextButton(OverlayContent content, bool active,
       {Widget? child}) {
     return (child != null)
@@ -206,27 +224,31 @@ class TutorialHandler {
     });
   }
 
-  Widget buttonWithText(String text, VoidCallback? onPressed) {
+  Widget buttonWithText(String text, VoidCallback? onPressed,
+      {Color borderColor = Colors.black,
+      Color backgroundColor = Colors.green,
+      TextStyle? textStyle,
+      Size? size}) {
     return SizedBox(
-      width: buttonWidth,
-      height: buttonHeight,
+      width: size?.width ?? buttonWidth,
+      height: size?.height ?? buttonHeight,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           disabledBackgroundColor: btnDisabledBackground,
           disabledForegroundColor: btnDisabledForeground,
-          backgroundColor: Colors.white,
+          backgroundColor: backgroundColor,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          side: const BorderSide(color: Colors.black, width: 2),
+          side: BorderSide(color: borderColor, width: 2),
           elevation: 4,
           shadowColor: Colors.black,
         ),
         child: FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(text, style: tutorialTextStyle),
+          child: Text(text, style: textStyle ?? tutorialTextStyle),
         ),
       ),
     );
@@ -261,10 +283,13 @@ class TutorialHandler {
       return createFullScreenOverlayContent(context, tutorialStep);
     }
     // Obtenir toutes les positions et tailles des widgets
-    List<ExclusionZone> exclusionZonesWithRect =
+    List<ExclusionZone?> exclusionZonesWithRect =
         config.exclusionZones.map((zone) {
-      final RenderBox box =
-          (zone.widgetKey.currentContext!.findRenderObject() as RenderBox);
+      final RenderBox? box =
+          (zone.widgetKey.currentContext?.findRenderObject() as RenderBox?);
+      if (box == null) {
+        return null;
+      }
       Offset widgetPosition = box.localToGlobal(Offset.zero);
       final Rect rect = Rect.fromLTWH(
         widgetPosition.dx - overlayOffset.dx,
@@ -281,11 +306,11 @@ class TutorialHandler {
     final List<Positioned> widgets = exclusionZonesWithRect.expand((zone) {
       List<Positioned> positionedWidgets = [];
 
-      if (zone.rect == null) {
-        throw Exception("Rect not defined for exclusion zone");
+      if (zone?.rect == null) {
+        return positionedWidgets;
       }
 
-      final Rect rect = zone.rect!;
+      final Rect rect = zone!.rect!;
 
       // Ajouter un widget "top" si défini
       if (zone.top != null) {
@@ -356,7 +381,8 @@ class TutorialHandler {
     }).toList();
 
     return OverlayContent(
-      exclusionZones: exclusionZonesWithRect,
+      exclusionZones:
+          exclusionZonesWithRect.whereType<ExclusionZone>().toList(),
       widgets: widgets,
       exclusionBorderRadius: config.exclusionBorderRadius,
     );

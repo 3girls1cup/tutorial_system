@@ -81,8 +81,9 @@ class OverlayConfig {
     this.breathingScale = 1.1,
     this.delayBeforeNextButtonActive = 0,
     this.exclusionBorderRadius = 8.0,
+    this.displaySkipButton = true,
     this.displayNextButton = true,
-    this.displayPreviousButton = true,
+    this.displayPreviousButton = false,
   }) : exclusionZones = exclusionZones
             .map((zone) => zone.copyWith(
                   rounded: rounded,
@@ -106,6 +107,7 @@ class OverlayConfig {
   final int delayBeforeNextButtonActive;
   final bool displayNextButton;
   final bool displayPreviousButton;
+  final bool displaySkipButton;
 
   OverlayConfig copyWith({
     OverlayConfig?
@@ -123,6 +125,7 @@ class OverlayConfig {
     int? delayBeforeNextButtonActive,
     bool? displayNextButton,
     bool? displayPreviousButton,
+    bool? displaySkipButton,
   }) {
     return OverlayConfig(
       exclusionZones:
@@ -150,6 +153,9 @@ class OverlayConfig {
       displayPreviousButton: displayPreviousButton ??
           other?.displayPreviousButton ??
           this.displayPreviousButton,
+      displaySkipButton: displaySkipButton ??
+          other?.displaySkipButton ??
+          this.displaySkipButton,
     );
   }
 }

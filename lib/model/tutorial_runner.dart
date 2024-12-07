@@ -41,6 +41,10 @@ class TutorialRunner {
     return (nextStep, nextIndex);
   }
 
+  (TutorialStep?, int?) getLastStep() {
+    return (tutorialSteps.last, tutorialSteps.length - 1);
+  }
+
   (TutorialStep?, int?) _nextStep(int? previousIndex) {
     if (_registeredStepsForReplay.isNotEmpty) {
       TutorialStep nextStep = _registeredStepsForReplay.first;
